@@ -40,7 +40,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         children: screens,
       ),
       bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex > 4 ? 4 : _currentIndex,
+        selectedIndex: _currentIndex,
         onDestinationSelected: (index) {
           setState(() {
             _currentIndex = index;
@@ -69,6 +69,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.groups_outlined),
             selectedIcon: Icon(Icons.groups_rounded, color: AppColors.primaryDark),
             label: 'Cộng Đồng',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_menu_outlined),
+            selectedIcon: Icon(Icons.restaurant_menu_rounded, color: AppColors.primaryDark),
+            label: 'Dinh Dưỡng',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),
