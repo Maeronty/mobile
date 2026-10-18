@@ -3,8 +3,6 @@ import '../theme/app_colors.dart';
 import 'home/home_screen.dart';
 import 'suggest/suggest_screen.dart';
 import 'kitchen_bag/kitchen_bag_screen.dart';
-import 'community/community_screen.dart';
-import 'nutrition/nutrition_advisor_screen.dart';
 import 'profile/profile_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -29,8 +27,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       HomeScreen(onNavigateTab: _navigateToTab),
       const SuggestScreen(),
       const KitchenBagScreen(),
-      const CommunityScreen(),
-      const NutritionAdvisorScreen(),
       const ProfileScreen(),
     ];
 
@@ -64,16 +60,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             icon: Icon(Icons.kitchen_outlined),
             selectedIcon: Icon(Icons.kitchen_rounded, color: AppColors.primaryDark),
             label: 'Túi Thần Kỳ',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.groups_outlined),
-            selectedIcon: Icon(Icons.groups_rounded, color: AppColors.primaryDark),
-            label: 'Cộng Đồng',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.restaurant_menu_outlined),
-            selectedIcon: Icon(Icons.restaurant_menu_rounded, color: AppColors.primaryDark),
-            label: 'Dinh Dưỡng',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline_rounded),

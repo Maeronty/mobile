@@ -210,7 +210,11 @@ class _SuggestScreenState extends State<SuggestScreen> {
                             Icon(
                               Icons.kitchen_rounded,
                               size: 18,
-                              color: _searchMode == 1 ? Colors.white : AppColors.textSecondaryLight,
+                              color: _searchMode == 1
+                                  ? Colors.white
+                                  : Theme.of(context).brightness == Brightness.dark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -218,7 +222,11 @@ class _SuggestScreenState extends State<SuggestScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _searchMode == 1 ? Colors.white : AppColors.textSecondaryLight,
+                                color: _searchMode == 1
+                                    ? Colors.white
+                                    : Theme.of(context).brightness == Brightness.dark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
                               ),
                             ),
                           ],
@@ -242,7 +250,11 @@ class _SuggestScreenState extends State<SuggestScreen> {
                             Icon(
                               Icons.search_rounded,
                               size: 18,
-                              color: _searchMode == 0 ? Colors.white : AppColors.textSecondaryLight,
+                              color: _searchMode == 0
+                                  ? Colors.white
+                                  : Theme.of(context).brightness == Brightness.dark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight,
                             ),
                             const SizedBox(width: 6),
                             Text(
@@ -250,7 +262,11 @@ class _SuggestScreenState extends State<SuggestScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _searchMode == 0 ? Colors.white : AppColors.textSecondaryLight,
+                                color: _searchMode == 0
+                                    ? Colors.white
+                                    : Theme.of(context).brightness == Brightness.dark
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondaryLight,
                               ),
                             ),
                           ],
