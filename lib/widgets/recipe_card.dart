@@ -195,13 +195,21 @@ class RecipeCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.timer_outlined, size: 12, color: AppColors.textSecondaryLight),
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 12,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
                       const SizedBox(width: 2),
                       Text(
                         '${recipe.cookTimeMinutes}p',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.textSecondaryLight,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -333,11 +341,22 @@ class RecipeCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    const Icon(Icons.timer_outlined, size: 13, color: AppColors.textSecondaryLight),
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 13,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
                     const SizedBox(width: 3),
                     Text(
                       '${recipe.cookTimeMinutes} phút',
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondaryLight),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
+                      ),
                     ),
                     const SizedBox(width: 12),
                     const Icon(Icons.local_fire_department_rounded, size: 13, color: AppColors.accentOrange),

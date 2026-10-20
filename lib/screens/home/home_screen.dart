@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
               child: const Icon(Icons.eco_rounded, color: AppColors.primary, size: 22),
             ),
             const SizedBox(width: 10),
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
@@ -120,7 +120,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 Text(
                   'Food Tip & Smart Cooking',
-                  style: TextStyle(fontSize: 10, color: AppColors.textSecondaryLight),
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: appState.isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
                 ),
               ],
             ),
@@ -400,7 +405,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppColors.textPrimaryLight,
+                      color: isSelected
+                          ? Colors.white
+                          : appState.isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimaryLight,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                       fontSize: 13,
                     ),
@@ -408,7 +417,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20),
                       side: BorderSide(
-                        color: isSelected ? AppColors.primary : AppColors.dividerLight,
+                        color: isSelected
+                            ? AppColors.primary
+                            : appState.isDarkMode
+                                ? AppColors.dividerDark
+                                : AppColors.dividerLight,
                       ),
                     ),
                     onSelected: (val) {
