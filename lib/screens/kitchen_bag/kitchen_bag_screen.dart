@@ -50,7 +50,9 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
         bottom: TabBar(
           controller: _tabController,
           labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondaryLight,
+          unselectedLabelColor: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.textSecondaryDark
+              : AppColors.textSecondaryLight,
           indicatorColor: AppColors.primary,
           indicatorWeight: 3,
           tabs: [
@@ -191,7 +193,11 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
                           backgroundColor: Theme.of(context).cardTheme.color,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(color: AppColors.dividerLight),
+                            side: BorderSide(
+                              color: Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.dividerDark
+                                  : AppColors.dividerLight,
+                            ),
                           ),
                         );
                       }).toList(),
@@ -206,7 +212,13 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(top: BorderSide(color: AppColors.dividerLight)),
+              border: Border(
+                top: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.dividerDark
+                      : AppColors.dividerLight,
+                ),
+              ),
             ),
             child: SafeArea(
               child: ElevatedButton.icon(

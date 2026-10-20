@@ -110,7 +110,11 @@ class PricingScreen extends StatelessWidget {
         color: Theme.of(context).cardTheme.color,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isRecommended ? AppColors.primary : AppColors.dividerLight,
+          color: isRecommended
+              ? AppColors.primary
+              : Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.dividerDark
+                  : AppColors.dividerLight,
           width: isRecommended ? 2 : 1,
         ),
       ),

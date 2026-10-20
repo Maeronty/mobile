@@ -434,11 +434,22 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                                 if (step.estimatedMinutes != null)
                                   Row(
                                     children: [
-                                      const Icon(Icons.schedule, size: 14, color: AppColors.textSecondaryLight),
+                                      Icon(
+                                        Icons.schedule,
+                                        size: 14,
+                                        color: Theme.of(context).brightness == Brightness.dark
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondaryLight,
+                                      ),
                                       const SizedBox(width: 4),
                                       Text(
                                         '${step.estimatedMinutes} phút',
-                                        style: const TextStyle(fontSize: 12, color: AppColors.textSecondaryLight),
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context).brightness == Brightness.dark
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondaryLight,
+                                        ),
                                       ),
                                     ],
                                   ),
