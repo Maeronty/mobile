@@ -4,6 +4,6 @@ import 'package:tomato_food_tip/main.dart';
 void main() {
   testWidgets('TomatoFoodTipApp smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const TomatoFoodTipApp());
-    expect(find.text('Tomato'), findsOneWidget);
+    expect(find.text('Bếp Việt'), findsOneWidget);
   });
 }

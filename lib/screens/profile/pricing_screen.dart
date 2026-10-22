@@ -8,7 +8,7 @@ class PricingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Gói Dịch Vụ Tomato Pro'),
+        title: const Text('Gói Dịch Vụ Bếp Việt Pro'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -73,7 +73,7 @@ class PricingScreen extends StatelessWidget {
             // Plan 2: Pro Chef (Recommended)
             _buildPlanCard(
               context,
-              title: 'Đầu Bếp VIP (Tomato Pro)',
+              title: 'Đầu Bếp VIP (Bếp Việt Pro)',
               price: '69.000 đ',
               period: 'tháng',
               isRecommended: true,
