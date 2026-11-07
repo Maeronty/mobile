@@ -1,7 +1,26 @@
+// =============================================================================
+// MÀN HÌNH: HỒ SƠ & CÀI ĐẶT (tab "Cá Nhân")
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN.
+//   - Thông tin người dùng, chế độ ăn, thông báo → `profile_controller.dart`.
+//   - Số món đã lưu                             → FavoritesController.
+//   - Dark Mode                                 → ThemeController.
+//
+// FLOW UI
+//   1. initState → lắng nghe ProfileController & FavoritesController để tự
+//      build lại khi tuỳ chọn hoặc số món yêu thích thay đổi.
+//   2. Bấm thẻ nâng cấp → mở PricingScreen.
+//   3. "Chế độ ăn uống" → `_showDietPreferenceDialog` → setDietPreference.
+//   4. Công tắc Thông báo / Dark Mode → controller tương ứng.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
+import '../../core/theme/app_colors.dart';
+import '../favorites/favorites_controller.dart';
+import '../theme/theme_controller.dart';
 import 'pricing_screen.dart';
+import 'profile_controller.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -11,14 +30,30 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  String _dietPreference = 'Cân bằng & Đa dạng';
-  bool _notificationEnabled = true;
+  final ProfileController _profile = ProfileController.instance;
+  final FavoritesController _favorites = FavoritesController.instance;
+
+  @override
+  void initState() {
+    super.initState();
+    _profile.addListener(_onChanged);
+    _favorites.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    _profile.removeListener(_onChanged);
+    _favorites.removeListener(_onChanged);
+    super.dispose();
+  }
+
+  void _onChanged() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppState();
-    final user = appState.currentUser;
-    final isDark = appState.isDarkMode;
+    final theme = ThemeController.instance;
+    final user = _profile.currentUser;
+    final isDark = theme.isDarkMode;
 
     return Scaffold(
       appBar: AppBar(
@@ -26,7 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           IconButton(
             icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => setState(() => appState.toggleTheme()),
+            onPressed: () => setState(() => theme.toggleTheme()),
           ),
         ],
       ),
@@ -96,7 +131,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildStatColumn('Đã lưu', '${appState.favoriteIds.length} món'),
+                      _buildStatColumn('Đã lưu', '${_favorites.favoriteIds.length} món'),
                       Container(width: 1, height: 28, color: Colors.grey.withOpacity(0.2)),
                       _buildStatColumn('Đã nấu', '${user.cookedCount} lần'),
                       Container(width: 1, height: 28, color: Colors.grey.withOpacity(0.2)),
@@ -181,7 +216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ListTile(
                     leading: const Icon(Icons.restaurant_menu_rounded, color: AppColors.primary),
                     title: const Text('Chế độ ăn yêu thích'),
-                    subtitle: Text(_dietPreference, style: const TextStyle(fontSize: 12)),
+                    subtitle: Text(_profile.dietPreference, style: const TextStyle(fontSize: 12)),
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
                       _showDietPreferenceDialog();
@@ -192,9 +227,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     secondary: const Icon(Icons.notifications_active_outlined, color: AppColors.primary),
                     title: const Text('Thông báo gợi ý món ngon'),
                     subtitle: const Text('Nhận công thức phù hợp mỗi ngày lúc 10h sáng và 16h chiều', style: TextStyle(fontSize: 12)),
-                    value: _notificationEnabled,
+                    value: _profile.notificationEnabled,
                     activeThumbColor: AppColors.primary,
-                    onChanged: (val) => setState(() => _notificationEnabled = val),
+                    onChanged: _profile.setNotificationEnabled,
                   ),
                   const Divider(height: 1),
                   SwitchListTile(
@@ -202,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: const Text('Giao diện tối (Dark Mode)'),
                     value: isDark,
                     activeThumbColor: AppColors.primary,
-                    onChanged: (val) => setState(() => appState.toggleTheme()),
+                    onChanged: (val) => setState(() => theme.toggleTheme()),
                   ),
                 ],
               ),
@@ -287,15 +322,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showDietPreferenceDialog() {
-    final options = ['Cân bằng & Đa dạng', 'Eat Clean hữu cơ', 'Keto / Low-Carb', 'Thuần chay (Vegan)', 'Ăn chay có trứng sữa'];
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('Chọn chế độ ăn uống'),
-        children: options.map((opt) {
+        children: ProfileController.dietOptions.map((opt) {
           return SimpleDialogOption(
             onPressed: () {
-              setState(() => _dietPreference = opt);
+              _profile.setDietPreference(opt);
               Navigator.pop(context);
             },
             child: Padding(

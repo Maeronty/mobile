@@ -73,43 +73,115 @@
 
 ## 🏗️ 3. Cấu Trúc Thư Mục Dự Án (Project Structure)
 
-Dự án áp dụng kiến trúc phân tầng rõ ràng, tách biệt giữa giao diện (UI), dịch vụ trạng thái (State/Service) và dữ liệu (Models/Data):
+Dự án tổ chức theo hướng **feature-first** với tôn chỉ **"1 feature = 1 thư mục, toàn bộ logic của feature nằm ở 1 file controller"**:
+
+- `*_controller.dart` — chứa **state + logic + flow** của feature (kèm chú thích giải thích từng bước ở đầu file). Không import widget/giao diện.
+- `*_screen.dart` — **chỉ giao diện**: đọc dữ liệu từ controller và gọi hành động của controller.
+- `core/` — phần dùng chung giữa nhiều feature (models, dữ liệu mẫu, theme, widget tái sử dụng).
 
 ```text
 mobile/
-├── assets/
-│   └── images/                # Hình ảnh món ăn chất lượng cao (phở, bánh mì, bún bò, salad, cá hồi,...)
+├── assets/images/                     # Hình ảnh món ăn
 ├── lib/
-│   ├── data/
-│   │   └── mock_data.dart     # Mock database công thức, bài viết cộng đồng & kế hoạch dinh dưỡng
-│   ├── models/
-│   │   ├── meal_plan.dart     # Data model kế hoạch thực đơn dinh dưỡng
-│   │   ├── post.dart          # Data model bài viết và bình luận cộng đồng
-│   │   └── recipe.dart        # Data model chi tiết công thức, nguyên liệu và hướng dẫn nấu
-│   ├── screens/
-│   │   ├── community/         # Màn hình cộng đồng & đăng bài ẩm thực
-│   │   ├── detail/            # Màn hình chi tiết công thức & Chế độ nấu ăn từng bước
-│   │   │   ├── cooking_mode_screen.dart
-│   │   │   └── recipe_detail_screen.dart
-│   │   ├── home/              # Màn hình chính (Carousel, bộ sưu tập món ngon)
-│   │   ├── kitchen_bag/       # Màn hình Túi Thần Kỳ (Tủ lạnh & Món yêu thích)
-│   │   ├── nutrition/         # Màn hình cố vấn dinh dưỡng & thực đơn cả tuần
-│   │   ├── profile/           # Màn hình hồ sơ cá nhân, cài đặt & Bếp Việt Pro
-│   │   ├── suggest/           # Màn hình gợi ý & lọc thông minh theo nguyên liệu
-│   │   └── main_navigation_screen.dart  # Thanh điều hướng BottomNavigationBar
-│   ├── services/
-│   │   └── app_state.dart     # Quản lý trạng thái ứng dụng (AppState: Singleton ChangeNotifier)
-│   ├── theme/
-│   │   ├── app_colors.dart    # Bảng màu chủ đạo (Emerald Green & Warm Red)
-│   │   └── app_theme.dart     # Cấu hình Material 3 ThemeData (Light & Dark)
-│   ├── widgets/
-│   │   ├── difficulty_stars.dart  # Widget hiển thị mức độ khó trực quan
-│   │   └── recipe_card.dart       # Card món ăn tái sử dụng với animation & badge
-│   └── main.dart              # Entry point của ứng dụng
-├── test/
-│   └── widget_test.dart       # Unit & Widget tests
-└── pubspec.yaml               # Quản lý dependencies & cấu hình assets
+│   ├── main.dart                      # Entry point
+│   ├── app/
+│   │   ├── app.dart                   # MaterialApp + lắng nghe Dark Mode
+│   │   └── main_navigation_screen.dart# Thanh điều hướng 4 tab (IndexedStack)
+│   ├── core/                          # ── Dùng chung ──
+│   │   ├── data/
+│   │   │   ├── mock_data.dart         # Dữ liệu mẫu: công thức, bài viết, thực đơn
+│   │   │   └── recipe_repository.dart # Kho công thức (single source of truth)
+│   │   ├── models/                    # recipe.dart · post.dart · meal_plan.dart
+│   │   ├── theme/                     # app_colors.dart · app_theme.dart
+│   │   └── widgets/                   # recipe_card.dart · difficulty_stars.dart
+│   └── features/                      # ── Mỗi feature 1 thư mục ──
+│       ├── home/                      # Trang chủ: banner, lọc danh mục, nấu nhanh
+│       │   ├── home_controller.dart
+│       │   └── home_screen.dart
+│       ├── suggest/                   # Gợi ý món + thuật toán Match Score
+│       │   ├── suggest_controller.dart
+│       │   └── suggest_screen.dart
+│       ├── kitchen_bag/               # Túi Thần Kỳ: tủ lạnh (pantry) + tab Đã Lưu
+│       │   ├── pantry_controller.dart
+│       │   └── kitchen_bag_screen.dart
+│       ├── favorites/                 # Món yêu thích (dùng ở Card, Chi tiết, Túi Thần Kỳ)
+│       │   └── favorites_controller.dart
+│       ├── recipe_detail/             # Chi tiết công thức: khẩu phần động + checklist
+│       │   ├── recipe_detail_controller.dart
+│       │   └── recipe_detail_screen.dart
+│       ├── cooking_mode/              # Nấu từng bước: chuyển bước, đồng hồ, giọng nói
+│       │   ├── cooking_mode_controller.dart
+│       │   └── cooking_mode_screen.dart
+│       ├── nutrition/                 # Cố vấn dinh dưỡng & thực đơn 7 ngày
+│       │   ├── nutrition_controller.dart
+│       │   └── nutrition_advisor_screen.dart
+│       ├── community/                 # Cộng đồng: thả tim, bình luận, đăng bài
+│       │   ├── community_controller.dart
+│       │   └── community_screen.dart
+│       ├── profile/                   # Hồ sơ, chế độ ăn, thông báo, gói Pro
+│       │   ├── profile_controller.dart
+│       │   ├── profile_screen.dart
+│       │   └── pricing_screen.dart
+│       └── theme/                     # Bật/tắt Dark Mode
+│           └── theme_controller.dart
+├── test/widget_test.dart
+└── pubspec.yaml
 ```
+
+**Luồng dữ liệu chung:** `Screen` gọi hành động trên `Controller` → controller cập nhật state và `notifyListeners()` → screen đang lắng nghe gọi `setState` để build lại.
+Controller dùng chung giữa nhiều màn hình (Theme, Favorites, Pantry, Profile, Community) là **singleton** (`XxxController.instance`); controller chỉ thuộc 1 màn hình (Home, Suggest, Recipe Detail, Cooking Mode, Nutrition) được tạo trong `initState` và huỷ trong `dispose`.
+
+### 3.1. Luồng Xử Lý Của Từng Feature (Flow & Logic)
+
+> Chi tiết từng bước được chú thích ngay ở đầu mỗi file `*_controller.dart`. Bảng dưới là bản tóm tắt.
+
+| Feature | Controller | Flow chính |
+| :--- | :--- | :--- |
+| **Trang chủ** | `home/home_controller.dart` | Timer 4s → `nextBannerIndex` (quay vòng) → banner trượt · Chạm chip danh mục → `selectCategory` → `filteredRecipes` · `fastRecipes` = món nấu ≤ 25 phút |
+| **Gợi ý thông minh** | `suggest/suggest_controller.dart` | Nạp nguyên liệu ban đầu (truyền vào → tủ lạnh → bộ mặc định) → chọn chế độ *Theo tủ lạnh* / *Theo tên món* → `results()` → sắp xếp theo độ khớp / đánh giá / thời gian / calo |
+| **Tủ lạnh (Pantry)** | `kitchen_bag/pantry_controller.dart` | `addIngredient` (trim, bỏ rỗng & trùng) · `removeIngredient` · `clear` → nút *"Gợi ý món từ N nguyên liệu"* mở màn Gợi ý |
+| **Yêu thích** | `favorites/favorites_controller.dart` | Lưu `Set<int>` id món → `toggleFavorite` thêm/bỏ → `favoriteRecipes` cho tab *Đã Lưu* |
+| **Chi tiết công thức** | `recipe_detail/recipe_detail_controller.dart` | `scaleFactor = khẩu phần chọn / khẩu phần gốc` → nhân cho nguyên liệu & dinh dưỡng · tick nguyên liệu đã chuẩn bị |
+| **Chế độ nấu ăn** | `cooking_mode/cooking_mode_controller.dart` | Mỗi bước nạp timer = `estimatedMinutes` (mặc định 3') · Play/Pause đếm ngược 1s → về 0 thì báo *Hết giờ* · `nextStep` ở bước cuối → chúc mừng hoàn tất |
+| **Dinh dưỡng** | `nutrition/nutrition_controller.dart` | Chọn đối tượng + mục tiêu → `generatePlan()` (loading 600ms) → thực đơn 7 ngày → chọn ngày xem chi tiết bữa ăn |
+| **Cộng đồng** | `community/community_controller.dart` | `toggleLike` (±1, không âm) · `addComment` (tác giả = user hiện tại) · `createPost` chèn bài mới lên đầu |
+| **Hồ sơ** | `profile/profile_controller.dart` | Giữ `currentUser`, chế độ ăn, bật/tắt thông báo |
+| **Giao diện Sáng/Tối** | `theme/theme_controller.dart` | `toggleTheme()` → `app/app.dart` lắng nghe → MaterialApp đổi `themeMode` |
+
+#### Thuật toán Match Score (Gợi ý theo tủ lạnh)
+
+```text
+Với mỗi công thức:
+  1. Duyệt từng nguyên liệu của công thức
+  2. "Đã có" nếu tên nguyên liệu CHỨA hoặc ĐƯỢC CHỨA trong nguyên liệu người dùng nhập
+     (không phân biệt hoa/thường — VD: "bò" khớp "Thịt bò")
+  3. Chia vào matched (đã có) / missing (cần mua thêm)
+  4. score = matched / tổng số nguyên liệu   (0.0 → 1.0)
+  5. Bỏ món không khớp nguyên liệu nào
+Sắp xếp giảm dần theo score → món tận dụng tủ lạnh tốt nhất đứng đầu.
+```
+
+#### Luồng dữ liệu giữa UI và Controller
+
+```text
+ Người dùng thao tác ─▶ Screen gọi hàm của Controller
+                              │
+                              ▼
+                 Controller cập nhật state + notifyListeners()
+                              │
+                              ▼
+          Screen (đã addListener) gọi setState() ─▶ build lại giao diện
+```
+
+> **Lưu ý:** `CommunityScreen` và `NutritionAdvisorScreen` đã hoàn thiện nhưng **chưa được gắn vào thanh điều hướng** (`lib/app/main_navigation_screen.dart`).
+
+### 3.2. Quy Ước Khi Thêm Feature Mới
+
+1. Tạo thư mục `lib/features/<ten_feature>/`.
+2. Viết **toàn bộ logic** vào `<ten_feature>_controller.dart` (kế thừa `ChangeNotifier`), mở đầu bằng khối chú thích: *Vai trò → Flow từng bước → Lưu ý*.
+3. Viết giao diện vào `<ten_feature>_screen.dart`: chỉ đọc state và gọi hàm của controller, **không** viết logic nghiệp vụ trong widget.
+4. Nếu state dùng chung nhiều màn hình → controller dạng singleton (`static final instance`); nếu chỉ thuộc 1 màn hình → tạo trong `initState`, huỷ trong `dispose`.
+5. Model / widget / dữ liệu dùng chung nhiều feature đặt trong `lib/core/`.
 
 ---
 
@@ -120,7 +192,7 @@ mobile/
 | **Framework** | [Flutter 3.x](https://flutter.dev/) | Cross-platform UI toolkit |
 | **Language** | [Dart 3.x](https://dart.dev/) | Ngôn ngữ lập trình hiện đại, type-safe |
 | **Design System** | [Material Design 3](https://m3.material.io/) | Thiết kế hiện đại, hỗ trợ Dynamic Color & Dark Mode |
-| **State Management** | `ChangeNotifier` + `ListenableBuilder` | Quản lý state gọn nhẹ, phản hồi tức thì, không gây boilerplate |
+| **State Management** | `ChangeNotifier` (1 controller / feature) | Mỗi feature có controller riêng, UI lắng nghe và build lại khi state đổi |
 | **Formatting & Time** | `intl: ^0.20.3` | Hỗ trợ định dạng số, ngày giờ và tiền tệ Việt Nam |
 | **Icons** | `cupertino_icons: ^1.0.8` & Material Icons | Bộ icon đa nền tảng sắc nét |
 | **Linter** | `flutter_lints: ^6.0.0` | Đảm bảo tiêu chuẩn code sạch (Clean Code Guidelines) |

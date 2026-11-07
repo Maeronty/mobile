@@ -1,8 +1,25 @@
+// =============================================================================
+// MÀN HÌNH: CHI TIẾT CÔNG THỨC
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Logic khẩu phần & checklist nằm trong
+// `recipe_detail_controller.dart`; trạng thái yêu thích nằm trong
+// FavoritesController.
+//
+// FLOW UI
+//   1. initState → tạo RecipeDetailController(recipeId) và lắng nghe.
+//   2. AppBar: nút chia sẻ (SnackBar demo) & nút trái tim (toggleFavorite).
+//   3. Khối dinh dưỡng + danh sách nguyên liệu hiển thị số đã nhân hệ số
+//      khẩu phần; bấm [−]/[+] để đổi khẩu phần, chạm dòng để tick nguyên liệu.
+//   4. Nút dưới cùng → mở CookingModeScreen(recipe).
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
-import '../../widgets/difficulty_stars.dart';
-import 'cooking_mode_screen.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/difficulty_stars.dart';
+import '../cooking_mode/cooking_mode_screen.dart';
+import '../favorites/favorites_controller.dart';
+import 'recipe_detail_controller.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final int recipeId;
@@ -17,49 +34,29 @@ class RecipeDetailScreen extends StatefulWidget {
 }
 
 class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
-  late int _servings;
-  final Set<int> _checkedIngredients = {};
+  late final RecipeDetailController _controller;
 
   @override
   void initState() {
     super.initState();
-    final recipe = AppState().recipes.firstWhere((r) => r.id == widget.recipeId);
-    _servings = recipe.servings;
-  }
-
-  void _increaseServings() {
-    setState(() {
-      _servings++;
-    });
-  }
-
-  void _decreaseServings() {
-    if (_servings > 1) {
-      setState(() {
-        _servings--;
-      });
-    }
-  }
-
-  void _toggleIngredientCheck(int index) {
-    setState(() {
-      if (_checkedIngredients.contains(index)) {
-        _checkedIngredients.remove(index);
-      } else {
-        _checkedIngredients.add(index);
-      }
-    });
+    _controller = RecipeDetailController(recipeId: widget.recipeId);
+    _controller.addListener(_onControllerChanged);
   }
 
   @override
+  void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() => setState(() {});
+
+  @override
   Widget build(BuildContext context) {
-    final appState = AppState();
-    final recipe = appState.recipes.firstWhere(
-      (r) => r.id == widget.recipeId,
-      orElse: () => appState.recipes.first,
-    );
-    final isFav = appState.isFavorite(recipe.id);
-    final scaleFactor = _servings / (recipe.servings == 0 ? 1 : recipe.servings);
+    final favorites = FavoritesController.instance;
+    final recipe = _controller.recipe;
+    final isFav = favorites.isFavorite(recipe.id);
 
     return Scaffold(
       body: CustomScrollView(
@@ -104,7 +101,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   ),
                   onPressed: () {
                     setState(() {
-                      appState.toggleFavorite(recipe.id);
+                      favorites.toggleFavorite(recipe.id);
                     });
                   },
                 ),
@@ -247,13 +244,13 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                   const SizedBox(height: 12),
                   Row(
                     children: [
-                      _buildNutritionBadge(context, 'Đạm', '${(recipe.nutrition.proteinGrams * scaleFactor).toStringAsFixed(0)}g', AppColors.primary),
+                      _buildNutritionBadge(context, 'Đạm', '${_controller.formatScaledGrams(recipe.nutrition.proteinGrams)}g', AppColors.primary),
                       const SizedBox(width: 8),
-                      _buildNutritionBadge(context, 'Tinh bột', '${(recipe.nutrition.carbsGrams * scaleFactor).toStringAsFixed(0)}g', Colors.blue),
+                      _buildNutritionBadge(context, 'Tinh bột', '${_controller.formatScaledGrams(recipe.nutrition.carbsGrams)}g', Colors.blue),
                       const SizedBox(width: 8),
-                      _buildNutritionBadge(context, 'Chất béo', '${(recipe.nutrition.fatGrams * scaleFactor).toStringAsFixed(0)}g', Colors.orange),
+                      _buildNutritionBadge(context, 'Chất béo', '${_controller.formatScaledGrams(recipe.nutrition.fatGrams)}g', Colors.orange),
                       const SizedBox(width: 8),
-                      _buildNutritionBadge(context, 'Chất xơ', '${((recipe.nutrition.fiberGrams ?? 2) * scaleFactor).toStringAsFixed(0)}g', Colors.green),
+                      _buildNutritionBadge(context, 'Chất xơ', '${_controller.formatScaledGrams(recipe.nutrition.fiberGrams ?? 2)}g', Colors.green),
                     ],
                   ),
 
@@ -271,7 +268,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            '${recipe.ingredients.length} nguyên liệu (${_checkedIngredients.length}/${recipe.ingredients.length} đã chuẩn bị)',
+                            '${recipe.ingredients.length} nguyên liệu (${_controller.checkedCount}/${recipe.ingredients.length} đã chuẩn bị)',
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context).brightness == Brightness.dark
@@ -291,11 +288,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.remove, size: 16, color: AppColors.primaryDark),
-                              onPressed: _decreaseServings,
+                              onPressed: _controller.decreaseServings,
                               visualDensity: VisualDensity.compact,
                             ),
                             Text(
-                              '$_servings phần',
+                              '${_controller.servings} phần',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
@@ -304,7 +301,7 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                             ),
                             IconButton(
                               icon: const Icon(Icons.add, size: 16, color: AppColors.primaryDark),
-                              onPressed: _increaseServings,
+                              onPressed: _controller.increaseServings,
                               visualDensity: VisualDensity.compact,
                             ),
                           ],
@@ -323,14 +320,11 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     separatorBuilder: (_, __) => const Divider(height: 1),
                     itemBuilder: (context, index) {
                       final item = recipe.ingredients[index];
-                      final isChecked = _checkedIngredients.contains(index);
-                      final scaledAmount = item.amount * scaleFactor;
-                      final amountStr = scaledAmount % 1 == 0
-                          ? scaledAmount.toInt().toString()
-                          : scaledAmount.toStringAsFixed(1);
+                      final isChecked = _controller.isIngredientChecked(index);
+                      final amountStr = _controller.formatScaledAmount(item.amount);
 
                       return InkWell(
-                        onTap: () => _toggleIngredientCheck(index),
+                        onTap: () => _controller.toggleIngredientCheck(index),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
                           child: Row(
