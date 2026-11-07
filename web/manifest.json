@@ -1,6 +1,6 @@
 {
-    "name": "tomato_food_tip",
-    "short_name": "tomato_food_tip",
+    "name": "Bếp Việt",
+    "short_name": "Bếp Việt",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
