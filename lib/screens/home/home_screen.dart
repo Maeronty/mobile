@@ -110,7 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tomato',
+                  'Bếp Việt',
                   style: TextStyle(
                     fontSize: 19,
                     fontWeight: FontWeight.w900,
@@ -366,7 +366,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             SizedBox(height: 2),
                             Text(
-                              'Nhập nguyên liệu để Tomato gợi ý món ngon tức thì',
+                              'Nhập nguyên liệu để Bếp Việt gợi ý món ngon tức thì',
                               style: TextStyle(color: Colors.white70, fontSize: 12),
                             ),
                           ],

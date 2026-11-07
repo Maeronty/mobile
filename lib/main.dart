@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'theme/app_theme.dart';
 import 'services/app_state.dart';
 import 'screens/main_navigation_screen.dart';
@@ -19,7 +20,7 @@ class TomatoFoodTipApp extends StatelessWidget {
       listenable: appState,
       builder: (context, _) {
         return MaterialApp(
-          title: 'Tomato - Food Tip System',
+          title: 'Bếp Việt - Food Tip System',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,

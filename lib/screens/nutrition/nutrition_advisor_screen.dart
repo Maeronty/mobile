@@ -111,7 +111,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Cố Vấn Dinh Dưỡng Tomato',
+                          'Cố Vấn Dinh Dưỡng Bếp Việt',
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

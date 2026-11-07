@@ -144,7 +144,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Gói Thành Viên: Tomato Pro VIP',
+                            'Gói Thành Viên: Bếp Việt Pro VIP',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -239,7 +239,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     trailing: const Icon(Icons.chevron_right_rounded),
                     onTap: () {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Bản quyền thuộc về Tomato Food Tip System.')),
+                        const SnackBar(content: Text('Bản quyền thuộc về Bếp Việt Food Tip System.')),
                       );
                     },
                   ),

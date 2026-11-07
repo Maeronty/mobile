@@ -103,7 +103,7 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
               ),
               const SizedBox(height: 4),
               Text(
-                'Lưu trữ những gì bạn đang có trong tủ lạnh. Tomato sẽ tự động tìm các món bạn có thể nấu ngay!',
+                'Lưu trữ những gì bạn đang có trong tủ lạnh. Bếp Việt sẽ tự động tìm các món bạn có thể nấu ngay!',
                 style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
               ),
             ],
