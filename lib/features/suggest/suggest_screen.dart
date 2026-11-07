@@ -1,10 +1,27 @@
+// =============================================================================
+// MÀN HÌNH: GỢI Ý MÓN ĂN THÔNG MINH (tab "Gợi Ý AI")
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Toàn bộ logic (chế độ tìm, thuật toán Match
+// Score, sắp xếp) nằm trong `suggest_controller.dart`.
+//
+// FLOW UI
+//   1. initState → tạo SuggestController (nạp nguyên liệu ban đầu) và lắng nghe
+//      controller: mỗi lần controller `notifyListeners()` → `setState` build lại.
+//   2. AppBar ▸ nút sắp xếp → `setSortMode(...)`.
+//   3. Thanh chọn chế độ: "Theo Tủ Lạnh" | "Tìm Theo Tên Món" → `setSearchMode`.
+//   4. Chế độ tên món   : gõ chữ → `setState` → `results(query)` lọc lại ngay.
+//      Chế độ nguyên liệu: nhập/ chạm chip gợi ý → add/remove nguyên liệu.
+//   5. Danh sách kết quả: RecipeCard + dòng "Đã có / Thiếu" (chế độ nguyên liệu).
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../models/recipe.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
-import '../../widgets/recipe_card.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/recipe_card.dart';
+import 'suggest_controller.dart';
 
 class SuggestScreen extends StatefulWidget {
+  /// Nguyên liệu truyền sẵn (VD: từ nút "Gợi ý món" ở Túi Thần Kỳ).
   final List<String>? initialIngredients;
 
   const SuggestScreen({super.key, this.initialIngredients});
@@ -14,126 +31,50 @@ class SuggestScreen extends StatefulWidget {
 }
 
 class _SuggestScreenState extends State<SuggestScreen> {
-  // Mode: 0 for "Tìm theo tên", 1 for "Tìm theo nguyên liệu (Tủ lạnh)"
-  int _searchMode = 1;
+  late final SuggestController _controller;
   final TextEditingController _textController = TextEditingController();
-  final List<String> _selectedIngredients = [];
-  String _sortMode = 'match'; // 'match', 'rating', 'time', 'calories'
-
-  final List<String> _quickSuggestions = [
-    'Thịt bò',
-    'Ức gà',
-    'Tôm tươi',
-    'Cá hồi',
-    'Trứng gà',
-    'Cà chua',
-    'Hành tây',
-    'Bánh phở',
-    'Mì Ý',
-    'Xà lách',
-    'Măng tây',
-    'Bơ lạt',
-  ];
 
   @override
   void initState() {
     super.initState();
-    if (widget.initialIngredients != null && widget.initialIngredients!.isNotEmpty) {
-      _selectedIngredients.addAll(widget.initialIngredients!);
-      _searchMode = 1;
-    } else {
-      // Default initial ingredients from app pantry
-      final pantry = AppState().pantryIngredients;
-      if (pantry.isNotEmpty) {
-        _selectedIngredients.addAll(pantry);
-      } else {
-        _selectedIngredients.addAll(['Thịt bò', 'Bánh phở', 'Tỏi']);
-      }
-    }
+    _controller = SuggestController(initialIngredients: widget.initialIngredients);
+    _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
     _textController.dispose();
     super.dispose();
   }
 
+  void _onControllerChanged() => setState(() {});
+
+  /// Thêm nguyên liệu; chỉ xoá ô nhập khi thêm thành công.
   void _addIngredient(String name) {
-    final clean = name.trim();
-    if (clean.isNotEmpty && !_selectedIngredients.contains(clean)) {
-      setState(() {
-        _selectedIngredients.add(clean);
-      });
+    if (_controller.addIngredient(name)) {
       _textController.clear();
     }
   }
 
-  void _removeIngredient(String name) {
-    setState(() {
-      _selectedIngredients.remove(name);
-    });
-  }
-
-  List<Recipe> _getFilteredRecipes() {
-    final appState = AppState();
-
-    if (_searchMode == 0) {
-      // Search by name / keyword
-      final query = _textController.text.toLowerCase().trim();
-      var list = appState.recipes;
-      if (query.isNotEmpty) {
-        list = list.where((r) {
-          final titleMatch = r.title.toLowerCase().contains(query);
-          final catMatch = r.category.toLowerCase().contains(query);
-          final tagMatch = r.tags.any((t) => t.toLowerCase().contains(query));
-          return titleMatch || catMatch || tagMatch;
-        }).toList();
-      }
-      return _applySorting(list);
-    } else {
-      // Search by ingredients (Smart Match)
-      var list = appState.matchRecipesByIngredients(_selectedIngredients);
-      return _applySorting(list);
-    }
-  }
-
-  List<Recipe> _applySorting(List<Recipe> input) {
-    final list = List<Recipe>.from(input);
-    switch (_sortMode) {
-      case 'rating':
-        list.sort((a, b) => b.averageRating.compareTo(a.averageRating));
-        break;
-      case 'time':
-        list.sort((a, b) => a.cookTimeMinutes.compareTo(b.cookTimeMinutes));
-        break;
-      case 'calories':
-        list.sort((a, b) => a.calories.compareTo(b.calories));
-        break;
-      case 'match':
-      default:
-        if (_searchMode == 1) {
-          list.sort((a, b) => (b.matchScore ?? 0).compareTo(a.matchScore ?? 0));
-        }
-        break;
-    }
-    return list;
-  }
+  void _removeIngredient(String name) => _controller.removeIngredient(name);
 
   @override
   Widget build(BuildContext context) {
-    final results = _getFilteredRecipes();
+    final results = _controller.results(_textController.text);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Gợi Ý Món Ăn Thông Minh'),
         actions: [
-          PopupMenuButton<String>(
+          PopupMenuButton<SuggestSortMode>(
             icon: const Icon(Icons.sort_rounded),
             tooltip: 'Sắp xếp kết quả',
-            onSelected: (mode) => setState(() => _sortMode = mode),
+            onSelected: _controller.setSortMode,
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'match',
+                value: SuggestSortMode.match,
                 child: Row(
                   children: [
                     Icon(Icons.bolt_rounded, color: Colors.amber, size: 18),
@@ -143,7 +84,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'rating',
+                value: SuggestSortMode.rating,
                 child: Row(
                   children: [
                     Icon(Icons.star_rounded, color: Colors.amber, size: 18),
@@ -153,7 +94,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'time',
+                value: SuggestSortMode.time,
                 child: Row(
                   children: [
                     Icon(Icons.timer_outlined, size: 18),
@@ -163,7 +104,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'calories',
+                value: SuggestSortMode.calories,
                 child: Row(
                   children: [
                     Icon(Icons.local_fire_department_outlined, color: AppColors.accentOrange, size: 18),
@@ -196,12 +137,12 @@ class _SuggestScreenState extends State<SuggestScreen> {
                 children: [
                   Expanded(
                     child: InkWell(
-                      onTap: () => setState(() => _searchMode = 1),
+                      onTap: () => _controller.setSearchMode(SuggestSearchMode.byIngredients),
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: _searchMode == 1 ? AppColors.primary : Colors.transparent,
+                          color: _controller.isIngredientMode ? AppColors.primary : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -210,7 +151,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                             Icon(
                               Icons.kitchen_rounded,
                               size: 18,
-                              color: _searchMode == 1
+                              color: _controller.isIngredientMode
                                   ? Colors.white
                                   : Theme.of(context).brightness == Brightness.dark
                                       ? AppColors.textSecondaryDark
@@ -222,7 +163,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _searchMode == 1
+                                color: _controller.isIngredientMode
                                     ? Colors.white
                                     : Theme.of(context).brightness == Brightness.dark
                                         ? AppColors.textSecondaryDark
@@ -236,12 +177,12 @@ class _SuggestScreenState extends State<SuggestScreen> {
                   ),
                   Expanded(
                     child: InkWell(
-                      onTap: () => setState(() => _searchMode = 0),
+                      onTap: () => _controller.setSearchMode(SuggestSearchMode.byName),
                       borderRadius: BorderRadius.circular(10),
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
-                          color: _searchMode == 0 ? AppColors.primary : Colors.transparent,
+                          color: !_controller.isIngredientMode ? AppColors.primary : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
@@ -250,7 +191,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                             Icon(
                               Icons.search_rounded,
                               size: 18,
-                              color: _searchMode == 0
+                              color: !_controller.isIngredientMode
                                   ? Colors.white
                                   : Theme.of(context).brightness == Brightness.dark
                                       ? AppColors.textSecondaryDark
@@ -262,7 +203,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold,
-                                color: _searchMode == 0
+                                color: !_controller.isIngredientMode
                                     ? Colors.white
                                     : Theme.of(context).brightness == Brightness.dark
                                         ? AppColors.textSecondaryDark
@@ -280,7 +221,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
           ),
 
           // Input Section based on mode
-          if (_searchMode == 0) ...[
+          if (!_controller.isIngredientMode) ...[
             // By Name Input
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -336,11 +277,11 @@ class _SuggestScreenState extends State<SuggestScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                itemCount: _quickSuggestions.length,
+                itemCount: SuggestController.quickSuggestions.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 6),
                 itemBuilder: (context, index) {
-                  final sug = _quickSuggestions[index];
-                  final isAlreadyAdded = _selectedIngredients.contains(sug);
+                  final sug = SuggestController.quickSuggestions[index];
+                  final isAlreadyAdded = _controller.isSelected(sug);
                   return ActionChip(
                     avatar: Icon(
                       isAlreadyAdded ? Icons.check_circle_rounded : Icons.add_rounded,
@@ -366,14 +307,14 @@ class _SuggestScreenState extends State<SuggestScreen> {
             ),
 
             // Active selected ingredients chips
-            if (_selectedIngredients.isNotEmpty)
+            if (_controller.selectedIngredients.isNotEmpty)
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: _selectedIngredients.map((ing) {
+                  children: _controller.selectedIngredients.map((ing) {
                     return Chip(
                       label: Text(ing),
                       deleteIcon: const Icon(Icons.close_rounded, size: 14),
@@ -402,9 +343,9 @@ class _SuggestScreenState extends State<SuggestScreen> {
                   'Kết quả đề xuất (${results.length} món)',
                   style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
-                if (_searchMode == 1 && _selectedIngredients.isNotEmpty)
+                if (_controller.isIngredientMode && _controller.selectedIngredients.isNotEmpty)
                   InkWell(
-                    onTap: () => setState(() => _selectedIngredients.clear()),
+                    onTap: _controller.clearIngredients,
                     child: const Text(
                       'Xóa tất cả',
                       style: TextStyle(fontSize: 12, color: AppColors.accent, fontWeight: FontWeight.w600),
@@ -431,7 +372,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            _searchMode == 1
+                            _controller.isIngredientMode
                                 ? 'Hãy thử thêm các nguyên liệu phổ biến như: Thịt bò, Trứng, Bánh phở...'
                                 : 'Thử tìm với từ khóa khác hoặc danh mục tổng quát hơn.',
                             textAlign: TextAlign.center,
@@ -456,7 +397,7 @@ class _SuggestScreenState extends State<SuggestScreen> {
                             onFavoriteToggled: () => setState(() {}),
                           ),
                           // Show matched & missing ingredients detail if in fridge mode
-                          if (_searchMode == 1 && item.matchScore != null)
+                          if (_controller.isIngredientMode && item.matchScore != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 6, left: 8, right: 8),
                               child: Row(

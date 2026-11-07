@@ -1,9 +1,26 @@
+// =============================================================================
+// THANH ĐIỀU HƯỚNG CHÍNH (Bottom Navigation — 4 tab)
+// =============================================================================
+//
+// FLOW
+//   1. `_currentIndex` quyết định tab đang hiển thị:
+//        0 Trang Chủ │ 1 Gợi Ý AI │ 2 Túi Thần Kỳ │ 3 Cá Nhân
+//   2. Dùng IndexedStack → các tab KHÔNG bị huỷ khi chuyển, giữ nguyên trạng
+//      thái (vị trí cuộn, ô tìm kiếm...).
+//   3. Chuyển tab bằng: bấm NavigationBar, hoặc HomeScreen gọi
+//      `onNavigateTab(index)` từ các thẻ CTA.
+//
+// LƯU Ý
+//   - CommunityScreen (features/community) và NutritionAdvisorScreen
+//     (features/nutrition) đã có nhưng CHƯA được gắn vào tab nào.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
-import 'home/home_screen.dart';
-import 'suggest/suggest_screen.dart';
-import 'kitchen_bag/kitchen_bag_screen.dart';
-import 'profile/profile_screen.dart';
+import '../core/theme/app_colors.dart';
+import '../features/home/home_screen.dart';
+import '../features/kitchen_bag/kitchen_bag_screen.dart';
+import '../features/profile/profile_screen.dart';
+import '../features/suggest/suggest_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -37,11 +54,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onDestinationSelected: _navigateToTab,
         backgroundColor: Theme.of(context).cardTheme.color,
         indicatorColor: AppColors.primaryLight,
         elevation: 4,

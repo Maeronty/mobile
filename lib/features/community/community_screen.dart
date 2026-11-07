@@ -1,7 +1,25 @@
+// =============================================================================
+// MÀN HÌNH: CỘNG ĐỒNG ẨM THỰC (Community Feed)
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Logic thả tim / bình luận / đăng bài nằm trong
+// `community_controller.dart`.
+//
+// FLOW UI
+//   1. build → đọc `CommunityController.instance.posts` và hiển thị bảng tin.
+//   2. Nút "+" (FAB) → `_openCreatePostDialog` → nhập tiêu đề + nội dung, chọn
+//      ảnh → "Đăng bài ngay" → createPost → đóng sheet → SnackBar.
+//   3. Nút trái tim → toggleLike → setState.
+//   4. Nút bình luận → `_openCommentsBottomSheet` → gửi bình luận → addComment
+//      → setSheetState (cập nhật sheet) + setState (cập nhật số bình luận).
+//
+// LƯU Ý: Màn hình này hiện chưa được gắn vào thanh điều hướng.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../models/post.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
+import '../../core/models/post.dart';
+import '../../core/theme/app_colors.dart';
+import 'community_controller.dart';
 
 class CommunityScreen extends StatefulWidget {
   const CommunityScreen({super.key});
@@ -133,7 +151,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         final title = _newPostTitleController.text.trim();
                         final content = _newPostContentController.text.trim();
                         if (title.isNotEmpty && content.isNotEmpty) {
-                          AppState().createPost(
+                          CommunityController.instance.createPost(
                             title: title,
                             content: content,
                             imageAsset: selectedDishImage,
@@ -171,11 +189,8 @@ class _CommunityScreenState extends State<CommunityScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setSheetState) {
-            final appState = AppState();
-            final currentPost = appState.communityPosts.firstWhere(
-              (p) => p.id == post.id,
-              orElse: () => post,
-            );
+            final community = CommunityController.instance;
+            final currentPost = community.findPost(post.id, fallback: post);
 
             return Padding(
               padding: EdgeInsets.only(
@@ -302,7 +317,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                               ),
                               onSubmitted: (text) {
                                 if (text.trim().isNotEmpty) {
-                                  appState.addComment(post.id, text);
+                                  community.addComment(post.id, text);
                                   _commentInputController.clear();
                                   setSheetState(() {});
                                   setState(() {});
@@ -317,7 +332,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                             onPressed: () {
                               final text = _commentInputController.text.trim();
                               if (text.isNotEmpty) {
-                                appState.addComment(post.id, text);
+                                community.addComment(post.id, text);
                                 _commentInputController.clear();
                                 setSheetState(() {});
                                 setState(() {});
@@ -339,7 +354,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final posts = AppState().communityPosts;
+    final posts = CommunityController.instance.posts;
 
     return Scaffold(
       appBar: AppBar(
@@ -517,7 +532,7 @@ class _CommunityScreenState extends State<CommunityScreen> {
                         ),
                         onPressed: () {
                           setState(() {
-                            AppState().toggleLikePost(post.id);
+                            CommunityController.instance.toggleLike(post.id);
                           });
                         },
                       ),

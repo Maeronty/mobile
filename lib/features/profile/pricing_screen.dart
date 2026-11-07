@@ -1,5 +1,13 @@
+// =============================================================================
+// MÀN HÌNH: GÓI NÂNG CẤP "BẾP VIỆT PRO VIP" (Pricing)
+// =============================================================================
+//
+// Màn hình tĩnh, chỉ hiển thị 2 gói (Cơ Bản miễn phí / Đầu Bếp VIP). Chưa tích
+// hợp thanh toán nên không có controller. Được mở từ ProfileScreen.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
+import '../../core/theme/app_colors.dart';
 
 class PricingScreen extends StatelessWidget {
   const PricingScreen({super.key});

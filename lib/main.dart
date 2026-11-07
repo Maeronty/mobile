@@ -1,33 +1,22 @@
+// =============================================================================
+// ENTRY POINT — Bếp Việt (Food Tip & Smart Cooking)
+// =============================================================================
+//
+// Cấu trúc thư mục (feature-first, mỗi feature = 1 thư mục, logic ở 1 file):
+//   lib/
+//   ├── main.dart                  ← file này: khởi động app
+//   ├── app/                       ← vỏ ứng dụng: MaterialApp + thanh điều hướng
+//   ├── core/                      ← dùng chung: models, data, theme, widgets
+//   └── features/<tên_feature>/
+//       ├── <feature>_controller.dart   ← TOÀN BỘ logic + flow của feature
+//       └── <feature>_screen.dart       ← chỉ giao diện
+// =============================================================================
+
 import 'package:flutter/material.dart';
 
-import 'theme/app_theme.dart';
-import 'services/app_state.dart';
-import 'screens/main_navigation_screen.dart';
+import 'app/app.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const TomatoFoodTipApp());
-}
-
-class TomatoFoodTipApp extends StatelessWidget {
-  const TomatoFoodTipApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final appState = AppState();
-
-    return ListenableBuilder(
-      listenable: appState,
-      builder: (context, _) {
-        return MaterialApp(
-          title: 'Bếp Việt - Food Tip System',
-          debugShowCheckedModeBanner: false,
-          theme: AppTheme.lightTheme,
-          darkTheme: AppTheme.darkTheme,
-          themeMode: appState.isDarkMode ? ThemeMode.dark : ThemeMode.light,
-          home: const MainNavigationScreen(),
-        );
-      },
-    );
-  }
 }

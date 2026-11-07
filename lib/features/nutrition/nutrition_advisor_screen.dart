@@ -1,7 +1,23 @@
+// =============================================================================
+// MÀN HÌNH: DINH DƯỠNG & THỰC ĐƠN AI (Nutrition Advisor)
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Lựa chọn và logic tạo thực đơn nằm trong
+// `nutrition_controller.dart`.
+//
+// FLOW UI
+//   1. initState → tạo NutritionController (đã có sẵn thực đơn mặc định).
+//   2. Chọn "Đối tượng" & "Mục tiêu" bằng ChoiceChip.
+//   3. Bấm "Tạo lại thực đơn thông minh" → `_generateNewPlan` → chờ controller
+//      tạo xong → SnackBar báo thành công.
+//   4. Chọn ngày → xem tổng calo, tóm tắt dinh dưỡng và danh sách bữa ăn.
+//
+// LƯU Ý: Màn hình này hiện chưa được gắn vào thanh điều hướng.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../models/meal_plan.dart';
-import '../../theme/app_colors.dart';
-import '../../data/mock_data.dart';
+import '../../core/theme/app_colors.dart';
+import 'nutrition_controller.dart';
 
 class NutritionAdvisorScreen extends StatefulWidget {
   const NutritionAdvisorScreen({super.key});
@@ -11,61 +27,39 @@ class NutritionAdvisorScreen extends StatefulWidget {
 }
 
 class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
-  String _selectedTargetGroup = 'Gia đình (4 người)';
-  String _selectedHealthGoal = 'Cân bằng';
-  int _selectedDayIndex = 0;
-  bool _isLoading = false;
-  late MealPlan _currentMealPlan;
-
-  final List<Map<String, String>> _targetGroups = [
-    {'id': 'Cá nhân', 'label': 'Cá nhân', 'sub': '1 người'},
-    {'id': 'Cặp đôi', 'label': 'Cặp đôi', 'sub': '2 người'},
-    {'id': 'Gia đình (4 người)', 'label': 'Gia đình', 'sub': '4 người'},
-    {'id': 'Đại gia đình', 'label': 'Đại gia đình', 'sub': '6+ người'},
-  ];
-
-  final List<Map<String, String>> _healthGoals = [
-    {'id': 'Cân bằng', 'label': 'Cân bằng', 'sub': 'Tiết kiệm & Đủ chất'},
-    {'id': 'Giảm cân', 'label': 'Giảm mỡ', 'sub': 'Kiểm soát calo'},
-    {'id': 'Tăng cơ', 'label': 'Tăng cơ', 'sub': 'Giàu protein'},
-    {'id': 'Eat Clean', 'label': 'Eat Clean', 'sub': 'Thanh lọc cơ thể'},
-  ];
+  final NutritionController _controller = NutritionController();
 
   @override
   void initState() {
     super.initState();
-    _currentMealPlan = MockData.generateSampleMealPlan(
-      targetGroup: _selectedTargetGroup,
-      healthGoal: _selectedHealthGoal,
-    );
+    _controller.addListener(_onControllerChanged);
   }
 
-  void _generateNewPlan() {
-    setState(() => _isLoading = true);
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _currentMealPlan = MockData.generateSampleMealPlan(
-            targetGroup: _selectedTargetGroup,
-            healthGoal: _selectedHealthGoal,
-          );
-          _selectedDayIndex = 0;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Đã tạo thành công thực đơn cho mục tiêu "$_selectedHealthGoal"!'),
-            backgroundColor: AppColors.primary,
-          ),
-        );
-      }
-    });
+  @override
+  void dispose() {
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onControllerChanged() => setState(() {});
+
+  Future<void> _generateNewPlan() async {
+    final done = await _controller.generatePlan();
+    if (!done || !mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đã tạo thành công thực đơn cho mục tiêu "${_controller.selectedHealthGoal}"!'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final dailyPlans = _currentMealPlan.dailyPlans;
-    final activeDayPlan = dailyPlans[_selectedDayIndex % dailyPlans.length];
+    final dailyPlans = _controller.dailyPlans;
+    final activeDayPlan = _controller.activeDayPlan;
 
     return Scaffold(
       appBar: AppBar(
@@ -144,13 +138,13 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _targetGroups.length,
+                itemCount: NutritionController.targetGroups.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final group = _targetGroups[index];
-                  final isSelected = group['id'] == _selectedTargetGroup;
+                  final group = NutritionController.targetGroups[index];
+                  final isSelected = group.id == _controller.selectedTargetGroup;
                   return ChoiceChip(
-                    label: Text('${group['label']} (${group['sub']})'),
+                    label: Text('${group.label} (${group.sub})'),
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     labelStyle: TextStyle(
@@ -158,9 +152,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       fontSize: 12,
                     ),
-                    onSelected: (val) {
-                      setState(() => _selectedTargetGroup = group['id']!);
-                    },
+                    onSelected: (_) => _controller.selectTargetGroup(group.id),
                   );
                 },
               ),
@@ -182,13 +174,13 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _healthGoals.length,
+                itemCount: NutritionController.healthGoals.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final goal = _healthGoals[index];
-                  final isSelected = goal['id'] == _selectedHealthGoal;
+                  final goal = NutritionController.healthGoals[index];
+                  final isSelected = goal.id == _controller.selectedHealthGoal;
                   return ChoiceChip(
-                    label: Text('${goal['label']} - ${goal['sub']}'),
+                    label: Text('${goal.label} - ${goal.sub}'),
                     selected: isSelected,
                     selectedColor: AppColors.primary,
                     labelStyle: TextStyle(
@@ -196,9 +188,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                       fontSize: 12,
                     ),
-                    onSelected: (val) {
-                      setState(() => _selectedHealthGoal = goal['id']!);
-                    },
+                    onSelected: (_) => _controller.selectHealthGoal(goal.id),
                   );
                 },
               ),
@@ -214,7 +204,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                   minimumSize: const Size(double.infinity, 48),
                   backgroundColor: AppColors.primary,
                 ),
-                icon: _isLoading
+                icon: _controller.isLoading
                     ? const SizedBox(
                         width: 18,
                         height: 18,
@@ -222,10 +212,10 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                       )
                     : const Icon(Icons.auto_awesome_rounded),
                 label: Text(
-                  _isLoading ? 'Đang tạo thực đơn...' : 'Tạo lại thực đơn thông minh',
+                  _controller.isLoading ? 'Đang tạo thực đơn...' : 'Tạo lại thực đơn thông minh',
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
-                onPressed: _isLoading ? null : _generateNewPlan,
+                onPressed: _controller.isLoading ? null : _generateNewPlan,
               ),
             ),
 
@@ -258,7 +248,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
                   final day = dailyPlans[index];
-                  final isSelected = index == _selectedDayIndex;
+                  final isSelected = index == _controller.selectedDayIndex;
                   return FilterChip(
                     selected: isSelected,
                     selectedColor: AppColors.primary,
@@ -267,7 +257,7 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
                       color: isSelected ? Colors.white : null,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                     ),
-                    onSelected: (_) => setState(() => _selectedDayIndex = index),
+                    onSelected: (_) => _controller.selectDay(index),
                   );
                 },
               ),

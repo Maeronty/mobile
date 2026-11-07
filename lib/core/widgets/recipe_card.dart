@@ -1,8 +1,21 @@
+// =============================================================================
+// WIDGET DÙNG CHUNG: THẺ CÔNG THỨC (RecipeCard)
+// =============================================================================
+//
+// Dùng ở Home, Gợi ý, Túi Thần Kỳ. Có 2 kiểu bố cục: dọc (lưới) và ngang (list).
+//
+// FLOW
+//   1. Chạm vào thẻ → mở RecipeDetailScreen(recipeId).
+//   2. Chạm icon trái tim → FavoritesController.toggleFavorite(recipe.id)
+//      → gọi `onFavoriteToggled` để màn hình cha build lại (VD: Túi Thần Kỳ
+//      cần bỏ món khỏi lưới "Đã Lưu").
+// =============================================================================
+
 import 'package:flutter/material.dart';
 import '../models/recipe.dart';
 import '../theme/app_colors.dart';
-import '../services/app_state.dart';
-import '../screens/detail/recipe_detail_screen.dart';
+import '../../features/favorites/favorites_controller.dart';
+import '../../features/recipe_detail/recipe_detail_screen.dart';
 import 'difficulty_stars.dart';
 
 class RecipeCard extends StatelessWidget {
@@ -19,8 +32,7 @@ class RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppState();
-    final isFav = appState.isFavorite(recipe.id);
+    final isFav = FavoritesController.instance.isFavorite(recipe.id);
 
     return InkWell(
       onTap: () {
@@ -122,7 +134,7 @@ class RecipeCard extends StatelessWidget {
                     size: 22,
                   ),
                   onPressed: () {
-                    AppState().toggleFavorite(recipe.id);
+                    FavoritesController.instance.toggleFavorite(recipe.id);
                     onFavoriteToggled?.call();
                   },
                 ),
@@ -325,7 +337,7 @@ class RecipeCard extends StatelessWidget {
                     ),
                     InkWell(
                       onTap: () {
-                        AppState().toggleFavorite(recipe.id);
+                        FavoritesController.instance.toggleFavorite(recipe.id);
                         onFavoriteToggled?.call();
                       },
                       child: Icon(

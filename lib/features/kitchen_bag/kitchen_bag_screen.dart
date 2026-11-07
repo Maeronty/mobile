@@ -1,9 +1,28 @@
+// =============================================================================
+// MÀN HÌNH: TÚI THẦN KỲ (Kitchen Bag) — gồm 2 tab
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN.
+//   - Tab 1 "Tủ Lạnh Của Bạn" → logic ở `pantry_controller.dart`.
+//   - Tab 2 "Đã Lưu"          → logic ở `features/favorites/favorites_controller.dart`.
+//
+// FLOW UI
+//   1. Nhập tên nguyên liệu → "Thêm"/Enter → `_addPantryItem()`
+//      → PantryController.addIngredient → xoá ô nhập → setState.
+//   2. Bấm × trên chip / "Dọn sạch tủ" → removeIngredient / clear → setState.
+//   3. Bấm "Gợi ý món từ N nguyên liệu này" → mở SuggestScreen với danh sách
+//      nguyên liệu hiện tại.
+//   4. Tab "Đã Lưu": lưới RecipeCard của các món yêu thích; bỏ thích trên card
+//      → callback `onFavoriteToggled` → setState để cập nhật lưới.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../models/recipe.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
-import '../../widgets/recipe_card.dart';
+import '../../core/models/recipe.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/recipe_card.dart';
+import '../favorites/favorites_controller.dart';
 import '../suggest/suggest_screen.dart';
+import 'pantry_controller.dart';
 
 class KitchenBagScreen extends StatefulWidget {
   const KitchenBagScreen({super.key});
@@ -32,7 +51,7 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
   void _addPantryItem() {
     final text = _pantryInputController.text.trim();
     if (text.isNotEmpty) {
-      AppState().addPantryIngredient(text);
+      PantryController.instance.addIngredient(text);
       _pantryInputController.clear();
       setState(() {});
     }
@@ -40,9 +59,9 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppState();
-    final favRecipes = appState.favoriteRecipes;
-    final pantryItems = appState.pantryIngredients;
+    final pantry = PantryController.instance;
+    final favRecipes = FavoritesController.instance.favoriteRecipes;
+    final pantryItems = pantry.ingredients;
 
     return Scaffold(
       appBar: AppBar(
@@ -71,16 +90,16 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
         controller: _tabController,
         children: [
           // TAB 1: Kitchen Pantry
-          _buildPantryTab(context, appState, pantryItems),
+          _buildPantryTab(context, pantry, pantryItems),
 
           // TAB 2: Favorites List
-          _buildFavoritesTab(context, appState, favRecipes),
+          _buildFavoritesTab(context, favRecipes),
         ],
       ),
     );
   }
 
-  Widget _buildPantryTab(BuildContext context, AppState appState, List<String> pantryItems) {
+  Widget _buildPantryTab(BuildContext context, PantryController pantry, List<String> pantryItems) {
     return Column(
       children: [
         // Top description banner
@@ -168,7 +187,7 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
                         ),
                         TextButton(
                           onPressed: () {
-                            setState(() => appState.clearPantry());
+                            setState(() => pantry.clear());
                           },
                           child: const Text('Dọn sạch tủ', style: TextStyle(color: AppColors.accent, fontSize: 12)),
                         ),
@@ -188,7 +207,7 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
                           label: Text(item),
                           deleteIcon: const Icon(Icons.close_rounded, size: 16),
                           onDeleted: () {
-                            setState(() => appState.removePantryIngredient(item));
+                            setState(() => pantry.removeIngredient(item));
                           },
                           backgroundColor: Theme.of(context).cardTheme.color,
                           shape: RoundedRectangleBorder(
@@ -246,7 +265,7 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildFavoritesTab(BuildContext context, AppState appState, List<Recipe> favRecipes) {
+  Widget _buildFavoritesTab(BuildContext context, List<Recipe> favRecipes) {
     if (favRecipes.isEmpty) {
       return Center(
         child: Column(

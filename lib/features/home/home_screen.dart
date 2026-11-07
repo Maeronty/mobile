@@ -1,10 +1,28 @@
+// =============================================================================
+// MÀN HÌNH: TRANG CHỦ (tab "Trang Chủ")
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Dữ liệu banner/danh mục và logic lọc nằm trong
+// `home_controller.dart`; Dark Mode nằm trong `features/theme/theme_controller.dart`.
+//
+// FLOW UI
+//   1. initState → tạo HomeController, lắng nghe thay đổi, bật timer banner.
+//   2. Timer mỗi 4s → PageView trượt tới `nextBannerIndex`.
+//   3. Chạm chip danh mục → `selectCategory` → lưới "Món ăn thịnh hành" lọc lại.
+//   4. Thẻ CTA "Tủ lạnh" / "Gợi ý AI" → `onNavigateTab(index)` để
+//      MainNavigationScreen chuyển tab.
+//   5. Nút mặt trăng/mặt trời → ThemeController.toggleTheme().
+// =============================================================================
+
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../theme/app_colors.dart';
-import '../../services/app_state.dart';
-import '../../widgets/recipe_card.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/widgets/recipe_card.dart';
+import '../theme/theme_controller.dart';
+import 'home_controller.dart';
 
 class HomeScreen extends StatefulWidget {
+  /// Callback để chuyển tab ở thanh điều hướng dưới (0: Home, 1: Gợi ý, 2: Túi Thần Kỳ, 3: Cá nhân).
   final Function(int)? onNavigateTab;
 
   const HomeScreen({super.key, this.onNavigateTab});
@@ -14,50 +32,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _selectedCategory = 'Tất cả';
+  final HomeController _controller = HomeController();
   final PageController _bannerController = PageController();
-  int _currentBannerIndex = 0;
   Timer? _bannerTimer;
-
-  final List<Map<String, String>> _heroBanners = [
-    {
-      'title': 'Phở Bò Hà Nội Thượng Hạng',
-      'subtitle': 'Hương vị truyền thống ngọt thanh từ xương hầm',
-      'image': 'assets/images/pho.png',
-      'tag': 'ĐẶC SẢN VIỆT',
-    },
-    {
-      'title': 'Bánh Mì Thịt Nướng Giòn Rụm',
-      'subtitle': 'Ẩm thực đường phố trứ danh đậm đà khó quên',
-      'image': 'assets/images/banh_mi.png',
-      'tag': 'ĐƯỜNG PHỐ',
-    },
-    {
-      'title': 'Bún Bò Xứ Huế Cay Nồng',
-      'subtitle': 'Đượm vị mắm ruốc cổ truyền và sả cây thơm ngát',
-      'image': 'assets/images/bun_bo_hue.png',
-      'tag': 'HƯƠNG VỊ CỐ ĐÔ',
-    },
-    {
-      'title': 'Cá Hồi Áp Chảo Măng Tây',
-      'subtitle': 'Giàu Omega-3 thanh lọc cơ thể chuẩn vị Âu',
-      'image': 'assets/images/salmon.png',
-      'tag': 'HEALTHY & KETO',
-    },
-  ];
-
-  final List<String> _categories = [
-    'Tất cả',
-    'Món Việt',
-    'Healthy',
-    'Món Âu',
-    'Ăn vặt',
-    'Tráng miệng',
-  ];
 
   @override
   void initState() {
     super.initState();
+    _controller.addListener(_onControllerChanged);
     _startBannerAutoSlide();
   }
 
@@ -65,15 +47,19 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _bannerTimer?.cancel();
     _bannerController.dispose();
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
     super.dispose();
   }
 
+  void _onControllerChanged() => setState(() {});
+
+  /// Tự trượt banner: mỗi `bannerInterval` chuyển sang trang kế tiếp (quay vòng).
   void _startBannerAutoSlide() {
-    _bannerTimer = Timer.periodic(const Duration(seconds: 4), (timer) {
+    _bannerTimer = Timer.periodic(HomeController.bannerInterval, (timer) {
       if (_bannerController.hasClients) {
-        final nextPage = (_currentBannerIndex + 1) % _heroBanners.length;
         _bannerController.animateToPage(
-          nextPage,
+          _controller.nextBannerIndex,
           duration: const Duration(milliseconds: 600),
           curve: Curves.easeInOutCubic,
         );
@@ -83,14 +69,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final appState = AppState();
-    final allRecipes = appState.recipes;
-
-    final filteredRecipes = _selectedCategory == 'Tất cả'
-        ? allRecipes
-        : allRecipes.where((r) => r.category == _selectedCategory).toList();
-
-    final fastRecipes = allRecipes.where((r) => r.cookTimeMinutes <= 25).toList();
+    final theme = ThemeController.instance;
+    final filteredRecipes = _controller.filteredRecipes;
+    final fastRecipes = _controller.fastRecipes;
 
     return Scaffold(
       appBar: AppBar(
@@ -122,7 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   'Food Tip & Smart Cooking',
                   style: TextStyle(
                     fontSize: 10,
-                    color: appState.isDarkMode
+                    color: theme.isDarkMode
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondaryLight,
                   ),
@@ -134,10 +115,10 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              appState.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+              theme.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
               color: AppColors.primary,
             ),
-            onPressed: () => setState(() => appState.toggleTheme()),
+            onPressed: () => setState(() => theme.toggleTheme()),
           ),
           const SizedBox(width: 8),
         ],
@@ -213,10 +194,10 @@ class _HomeScreenState extends State<HomeScreen> {
               height: 200,
               child: PageView.builder(
                 controller: _bannerController,
-                itemCount: _heroBanners.length,
-                onPageChanged: (idx) => setState(() => _currentBannerIndex = idx),
+                itemCount: HomeController.heroBanners.length,
+                onPageChanged: _controller.setBannerIndex,
                 itemBuilder: (context, index) {
-                  final banner = _heroBanners[index];
+                  final banner = HomeController.heroBanners[index];
                   return Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: ClipRRect(
@@ -300,8 +281,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Center(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
-                children: List.generate(_heroBanners.length, (idx) {
-                  final isActive = idx == _currentBannerIndex;
+                children: List.generate(HomeController.heroBanners.length, (idx) {
+                  final isActive = idx == _controller.currentBannerIndex;
                   return AnimatedContainer(
                     duration: const Duration(milliseconds: 300),
                     margin: const EdgeInsets.symmetric(horizontal: 3),
@@ -395,11 +376,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: _categories.length,
+                itemCount: HomeController.categories.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 8),
                 itemBuilder: (context, index) {
-                  final cat = _categories[index];
-                  final isSelected = cat == _selectedCategory;
+                  final cat = HomeController.categories[index];
+                  final isSelected = cat == _controller.selectedCategory;
                   return ChoiceChip(
                     label: Text(cat),
                     selected: isSelected,
@@ -407,7 +388,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     labelStyle: TextStyle(
                       color: isSelected
                           ? Colors.white
-                          : appState.isDarkMode
+                          : theme.isDarkMode
                               ? AppColors.textPrimaryDark
                               : AppColors.textPrimaryLight,
                       fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
@@ -419,16 +400,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       side: BorderSide(
                         color: isSelected
                             ? AppColors.primary
-                            : appState.isDarkMode
+                            : theme.isDarkMode
                                 ? AppColors.dividerDark
                                 : AppColors.dividerLight,
                       ),
                     ),
-                    onSelected: (val) {
-                      setState(() {
-                        _selectedCategory = cat;
-                      });
-                    },
+                    onSelected: (val) => _controller.selectCategory(cat),
                   );
                 },
               ),
@@ -443,7 +420,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    _selectedCategory == 'Tất cả' ? 'Món ăn thịnh hành' : 'Món: $_selectedCategory',
+                    _controller.isAllCategory ? 'Món ăn thịnh hành' : 'Món: ${_controller.selectedCategory}',
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(

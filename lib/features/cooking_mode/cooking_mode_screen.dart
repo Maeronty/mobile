@@ -1,7 +1,24 @@
-import 'dart:async';
+// =============================================================================
+// MÀN HÌNH: CHẾ ĐỘ NẤU ĂN TOÀN MÀN HÌNH (Cooking Mode)
+// =============================================================================
+//
+// FILE NÀY CHỈ CHỨA GIAO DIỆN. Logic chuyển bước, đồng hồ đếm ngược và giọng
+// nói nằm trong `cooking_mode_controller.dart`.
+//
+// FLOW UI
+//   1. initState → tạo CookingModeController, truyền callback
+//      `_showTimerFinishedDialog` để hiện dialog khi hết giờ, rồi lắng nghe.
+//   2. Nút loa (AppBar) → `_toggleVoiceReading` → khi bật hiện SnackBar
+//      nội dung bước (mô phỏng trợ lý giọng nói).
+//   3. Nút Play/Pause → controller.toggleTimer.
+//   4. "Bước trước" → prevStep;  "Bước tiếp" → `_nextStep`: nếu đã ở bước cuối
+//      thì hiện dialog chúc mừng → đóng dialog + thoát Cooking Mode.
+// =============================================================================
+
 import 'package:flutter/material.dart';
-import '../../models/recipe.dart';
-import '../../theme/app_colors.dart';
+import '../../core/models/recipe.dart';
+import '../../core/theme/app_colors.dart';
+import 'cooking_mode_controller.dart';
 
 class CookingModeScreen extends StatefulWidget {
   final Recipe recipe;
@@ -16,51 +33,26 @@ class CookingModeScreen extends StatefulWidget {
 }
 
 class _CookingModeScreenState extends State<CookingModeScreen> {
-  int _currentStepIndex = 0;
-  Timer? _timer;
-  int _secondsLeft = 0;
-  bool _isTimerRunning = false;
-  bool _isVoiceSpeaking = false;
+  late final CookingModeController _controller;
 
   @override
   void initState() {
     super.initState();
-    _resetTimerForCurrentStep();
+    _controller = CookingModeController(
+      recipe: widget.recipe,
+      onTimerFinished: _showTimerFinishedDialog,
+    );
+    _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _controller.removeListener(_onControllerChanged);
+    _controller.dispose();
     super.dispose();
   }
 
-  void _resetTimerForCurrentStep() {
-    _timer?.cancel();
-    final currentStep = widget.recipe.instructions[_currentStepIndex];
-    setState(() {
-      _secondsLeft = (currentStep.estimatedMinutes ?? 3) * 60;
-      _isTimerRunning = false;
-      _isVoiceSpeaking = false;
-    });
-  }
-
-  void _toggleTimer() {
-    if (_isTimerRunning) {
-      _timer?.cancel();
-      setState(() => _isTimerRunning = false);
-    } else {
-      setState(() => _isTimerRunning = true);
-      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (_secondsLeft > 0) {
-          setState(() => _secondsLeft--);
-        } else {
-          _timer?.cancel();
-          setState(() => _isTimerRunning = false);
-          _showTimerFinishedDialog();
-        }
-      });
-    }
-  }
+  void _onControllerChanged() => setState(() {});
 
   void _showTimerFinishedDialog() {
     showDialog(
@@ -73,7 +65,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
             Text('Hết giờ!'),
           ],
         ),
-        content: Text('Đã hoàn thành thời gian cho bước ${_currentStepIndex + 1}. Bạn có thể chuyển sang bước tiếp theo!'),
+        content: Text('Đã hoàn thành thời gian cho bước ${_controller.currentStepIndex + 1}. Bạn có thể chuyển sang bước tiếp theo!'),
         actions: [
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
@@ -84,44 +76,23 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
     );
   }
 
+  /// Bật/tắt giọng nói; khi bật thì hiện nội dung bước hiện tại.
   void _toggleVoiceReading() {
-    setState(() {
-      _isVoiceSpeaking = !_isVoiceSpeaking;
-    });
-    if (_isVoiceSpeaking) {
+    final isSpeaking = _controller.toggleVoice();
+    if (isSpeaking) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Đang đọc hướng dẫn: ${widget.recipe.instructions[_currentStepIndex].description}'),
+          content: Text('Đang đọc hướng dẫn: ${_controller.currentStep.description}'),
           duration: const Duration(seconds: 3),
         ),
       );
     }
   }
 
-  String _formatTime(int totalSeconds) {
-    final minutes = totalSeconds ~/ 60;
-    final seconds = totalSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
+  /// Sang bước tiếp; nếu đã là bước cuối thì chúc mừng hoàn tất.
   void _nextStep() {
-    if (_currentStepIndex < widget.recipe.instructions.length - 1) {
-      setState(() {
-        _currentStepIndex++;
-      });
-      _resetTimerForCurrentStep();
-    } else {
-      _showCompletionDialog();
-    }
-  }
-
-  void _prevStep() {
-    if (_currentStepIndex > 0) {
-      setState(() {
-        _currentStepIndex--;
-      });
-      _resetTimerForCurrentStep();
-    }
+    final moved = _controller.nextStep();
+    if (!moved) _showCompletionDialog();
   }
 
   void _showCompletionDialog() {
@@ -151,9 +122,9 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currentStep = widget.recipe.instructions[_currentStepIndex];
-    final totalSteps = widget.recipe.instructions.length;
-    final progress = (_currentStepIndex + 1) / totalSteps;
+    final currentStep = _controller.currentStep;
+    final totalSteps = _controller.totalSteps;
+    final progress = _controller.progress;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A), // Dark focused background
@@ -167,8 +138,8 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isVoiceSpeaking ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-              color: _isVoiceSpeaking ? AppColors.primary : Colors.white,
+              _controller.isVoiceSpeaking ? Icons.volume_up_rounded : Icons.volume_down_rounded,
+              color: _controller.isVoiceSpeaking ? AppColors.primary : Colors.white,
             ),
             tooltip: 'Trợ lý đọc giọng nói',
             onPressed: _toggleVoiceReading,
@@ -187,7 +158,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Bước ${_currentStepIndex + 1} / $totalSteps',
+                        'Bước ${_controller.currentStepIndex + 1} / $totalSteps',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -239,7 +210,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          'HƯỚNG DẪN BƯỚC ${_currentStepIndex + 1}',
+                          'HƯỚNG DẪN BƯỚC ${_controller.currentStepIndex + 1}',
                           style: const TextStyle(
                             color: AppColors.primary,
                             fontSize: 12,
@@ -317,7 +288,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                _formatTime(_secondsLeft),
+                                _controller.formattedTime,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 42,
@@ -331,11 +302,11 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                                 children: [
                                   IconButton.filled(
                                     style: IconButton.styleFrom(
-                                      backgroundColor: _isTimerRunning ? AppColors.accent : AppColors.primary,
+                                      backgroundColor: _controller.isTimerRunning ? AppColors.accent : AppColors.primary,
                                       padding: const EdgeInsets.all(14),
                                     ),
-                                    icon: Icon(_isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 28),
-                                    onPressed: _toggleTimer,
+                                    icon: Icon(_controller.isTimerRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, size: 28),
+                                    onPressed: _controller.toggleTimer,
                                   ),
                                   const SizedBox(width: 16),
                                   IconButton.outlined(
@@ -365,7 +336,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               child: Row(
                 children: [
-                  if (_currentStepIndex > 0)
+                  if (_controller.currentStepIndex > 0)
                     Expanded(
                       flex: 1,
                       child: OutlinedButton.icon(
@@ -377,10 +348,10 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                         ),
                         icon: const Icon(Icons.arrow_back_rounded),
                         label: const Text('Bước trước'),
-                        onPressed: _prevStep,
+                        onPressed: _controller.prevStep,
                       ),
                     ),
-                  if (_currentStepIndex > 0) const SizedBox(width: 12),
+                  if (_controller.currentStepIndex > 0) const SizedBox(width: 12),
                   Expanded(
                     flex: 2,
                     child: ElevatedButton.icon(
@@ -391,12 +362,12 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       icon: Icon(
-                        _currentStepIndex == totalSteps - 1
+                        _controller.currentStepIndex == totalSteps - 1
                             ? Icons.check_circle_rounded
                             : Icons.arrow_forward_rounded,
                       ),
                       label: Text(
-                        _currentStepIndex == totalSteps - 1
+                        _controller.currentStepIndex == totalSteps - 1
                             ? 'Hoàn thành món ăn'
                             : 'Bước tiếp theo',
                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
