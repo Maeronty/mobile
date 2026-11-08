@@ -59,12 +59,7 @@
   - *Eat Clean*: Thanh lọc cơ thể, ưu tiên nguyên liệu tươi sạch.
 - **Lập thực đơn 7 ngày**: Phân chia chi tiết Sáng - Trưa - Tối kèm mức chi phí dự tính mỗi ngày.
 
-### 👥 2.5. Cộng Đồng Ẩm Thực & Chia Sẻ (Community Feed)
-- Không gian giao lưu giữa những người yêu nấu ăn.
-- Đăng bài chia sẻ hình ảnh thành phẩm, bí quyết làm bếp.
-- Tương tác thả tim, bình luận thời gian thực và lọc theo hashtag ẩm thực.
-
-### ⚙️ 2.6. Cá Nhân Hoá & Giao Diện Hiện Đại
+### ⚙️ 2.5. Cá Nhân Hoá & Giao Diện Hiện Đại
 - **Hỗ trợ giao diện Sáng / Tối (Light & Dark Mode)** mượt mà, bảo vệ mắt khi nấu ăn ban đêm.
 - Quản lý danh sách món ăn yêu thích, thống kê số lượt đã nấu và hồ sơ người dùng.
 - Giao diện gói nâng cấp tài khoản **Bếp Việt Pro VIP**.
@@ -89,9 +84,9 @@ mobile/
 │   │   └── main_navigation_screen.dart# Thanh điều hướng 4 tab (IndexedStack)
 │   ├── core/                          # ── Dùng chung ──
 │   │   ├── data/
-│   │   │   ├── mock_data.dart         # Dữ liệu mẫu: công thức, bài viết, thực đơn
+│   │   │   ├── mock_data.dart         # Dữ liệu mẫu: công thức, người dùng, thực đơn
 │   │   │   └── recipe_repository.dart # Kho công thức (single source of truth)
-│   │   ├── models/                    # recipe.dart · post.dart · meal_plan.dart
+│   │   ├── models/                    # recipe.dart · user_profile.dart · meal_plan.dart
 │   │   ├── theme/                     # app_colors.dart · app_theme.dart
 │   │   └── widgets/                   # recipe_card.dart · difficulty_stars.dart
 │   └── features/                      # ── Mỗi feature 1 thư mục ──
@@ -115,9 +110,6 @@ mobile/
 │       ├── nutrition/                 # Cố vấn dinh dưỡng & thực đơn 7 ngày
 │       │   ├── nutrition_controller.dart
 │       │   └── nutrition_advisor_screen.dart
-│       ├── community/                 # Cộng đồng: thả tim, bình luận, đăng bài
-│       │   ├── community_controller.dart
-│       │   └── community_screen.dart
 │       ├── profile/                   # Hồ sơ, chế độ ăn, thông báo, gói Pro
 │       │   ├── profile_controller.dart
 │       │   ├── profile_screen.dart
@@ -129,7 +121,7 @@ mobile/
 ```
 
 **Luồng dữ liệu chung:** `Screen` gọi hành động trên `Controller` → controller cập nhật state và `notifyListeners()` → screen đang lắng nghe gọi `setState` để build lại.
-Controller dùng chung giữa nhiều màn hình (Theme, Favorites, Pantry, Profile, Community) là **singleton** (`XxxController.instance`); controller chỉ thuộc 1 màn hình (Home, Suggest, Recipe Detail, Cooking Mode, Nutrition) được tạo trong `initState` và huỷ trong `dispose`.
+Controller dùng chung giữa nhiều màn hình (Theme, Favorites, Pantry, Profile) là **singleton** (`XxxController.instance`); controller chỉ thuộc 1 màn hình (Home, Suggest, Recipe Detail, Cooking Mode, Nutrition) được tạo trong `initState` và huỷ trong `dispose`.
 
 ### 3.1. Luồng Xử Lý Của Từng Feature (Flow & Logic)
 
@@ -144,7 +136,6 @@ Controller dùng chung giữa nhiều màn hình (Theme, Favorites, Pantry, Prof
 | **Chi tiết công thức** | `recipe_detail/recipe_detail_controller.dart` | `scaleFactor = khẩu phần chọn / khẩu phần gốc` → nhân cho nguyên liệu & dinh dưỡng · tick nguyên liệu đã chuẩn bị |
 | **Chế độ nấu ăn** | `cooking_mode/cooking_mode_controller.dart` | Mỗi bước nạp timer = `estimatedMinutes` (mặc định 3') · Play/Pause đếm ngược 1s → về 0 thì báo *Hết giờ* · `nextStep` ở bước cuối → chúc mừng hoàn tất |
 | **Dinh dưỡng** | `nutrition/nutrition_controller.dart` | Chọn đối tượng + mục tiêu → `generatePlan()` (loading 600ms) → thực đơn 7 ngày → chọn ngày xem chi tiết bữa ăn |
-| **Cộng đồng** | `community/community_controller.dart` | `toggleLike` (±1, không âm) · `addComment` (tác giả = user hiện tại) · `createPost` chèn bài mới lên đầu |
 | **Hồ sơ** | `profile/profile_controller.dart` | Giữ `currentUser`, chế độ ăn, bật/tắt thông báo |
 | **Giao diện Sáng/Tối** | `theme/theme_controller.dart` | `toggleTheme()` → `app/app.dart` lắng nghe → MaterialApp đổi `themeMode` |
 
@@ -173,7 +164,7 @@ Sắp xếp giảm dần theo score → món tận dụng tủ lạnh tốt nh�
           Screen (đã addListener) gọi setState() ─▶ build lại giao diện
 ```
 
-> **Lưu ý:** `CommunityScreen` và `NutritionAdvisorScreen` đã hoàn thiện nhưng **chưa được gắn vào thanh điều hướng** (`lib/app/main_navigation_screen.dart`).
+> **Lưu ý:** `NutritionAdvisorScreen` đã hoàn thiện nhưng **chưa được gắn vào thanh điều hướng** (`lib/app/main_navigation_screen.dart`).
 
 ### 3.2. Quy Ước Khi Thêm Feature Mới
 
