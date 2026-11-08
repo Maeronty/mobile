@@ -315,7 +315,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                                       side: const BorderSide(color: Colors.white24),
                                     ),
                                     icon: const Icon(Icons.refresh_rounded),
-                                    onPressed: _resetTimerForCurrentStep,
+                                    onPressed: _controller.resetTimer,
                                   ),
                                 ],
                               ),

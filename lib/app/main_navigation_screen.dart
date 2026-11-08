@@ -11,8 +11,8 @@
 //      `onNavigateTab(index)` từ các thẻ CTA.
 //
 // LƯU Ý
-//   - CommunityScreen (features/community) và NutritionAdvisorScreen
-//     (features/nutrition) đã có nhưng CHƯA được gắn vào tab nào.
+//   - NutritionAdvisorScreen (features/nutrition) đã có nhưng CHƯA được gắn
+//     vào tab nào.
 // =============================================================================
 
 import 'package:flutter/material.dart';

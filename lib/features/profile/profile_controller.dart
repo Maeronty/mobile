@@ -3,8 +3,7 @@
 // =============================================================================
 //
 // VAI TRÒ
-//   - Giữ thông tin người dùng đang đăng nhập (`currentUser`). Feature Cộng
-//     đồng dùng thông tin này làm tác giả khi đăng bài / bình luận.
+//   - Giữ thông tin người dùng đang đăng nhập (`currentUser`).
 //   - Lưu các tuỳ chọn cá nhân: chế độ ăn uống, bật/tắt thông báo.
 //   (Dark Mode thuộc feature riêng: features/theme/theme_controller.dart)
 //
@@ -19,10 +18,10 @@
 import 'package:flutter/foundation.dart';
 
 import '../../core/data/mock_data.dart';
-import '../../core/models/post.dart';
+import '../../core/models/user_profile.dart';
 
 class ProfileController extends ChangeNotifier {
-  /// Singleton: thông tin người dùng dùng chung cho Profile và Community.
+  /// Singleton: thông tin người dùng dùng chung toàn app.
   static final ProfileController instance = ProfileController._();
 
   ProfileController._();

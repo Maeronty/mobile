@@ -1,5 +1,5 @@
 import '../models/recipe.dart';
-import '../models/post.dart';
+import '../models/user_profile.dart';
 import '../models/meal_plan.dart';
 
 class MockData {
@@ -571,96 +571,6 @@ class MockData {
           estimatedMinutes: 120,
         ),
       ],
-    ),
-  ];
-
-  static final List<CommunityPost> communityPosts = [
-    CommunityPost(
-      id: 'p_1',
-      author: const UserProfile(
-        id: 'u_2',
-        name: 'Bếp Của Thảo Nhi',
-        avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-        role: 'Master Home Cook',
-        bio: 'Mỗi bữa cơm là một niềm hạnh phúc!',
-      ),
-      title: 'Cuối tuần nấu tô Bún Bò Huế chiêu đãi cả nhà 🍲',
-      content: 'Bí quyết để nước dùng thơm mà không bị nồng là nướng sơ gừng với sả trước khi đập dập thả vào nồi nước dùng cả nhà ơi! Nước trong veo ngọt lịm từ xương hầm.',
-      imageAsset: 'assets/images/bun_bo_hue.png',
-      tags: ['BúnBòHuế', 'BếpGiaĐình', 'MónNgonMỗiNgày'],
-      createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-      likesCount: 142,
-      isLiked: true,
-      comments: [
-        PostComment(
-          id: 'c_1',
-          userName: 'Đầu Bếp Minh Nhật',
-          userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-          userRole: 'VIP Chef',
-          content: 'Màu nước dùng lên dầu điều đẹp quá bạn ơi! Chuẩn vị cố đô luôn.',
-          createdAt: DateTime.now().subtract(const Duration(hours: 2)),
-          likesCount: 12,
-          isLiked: true,
-          isAuthor: false,
-        ),
-        PostComment(
-          id: 'c_2',
-          userName: 'Khánh Vy',
-          userAvatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150',
-          userRole: 'Member',
-          content: 'Nhìn tô bún mà đói bụng cồn cào luôn, cuối tuần mình cũng thử theo công thức này!',
-          createdAt: DateTime.now().subtract(const Duration(minutes: 45)),
-          likesCount: 4,
-          isLiked: false,
-        ),
-      ],
-    ),
-    CommunityPost(
-      id: 'p_2',
-      author: const UserProfile(
-        id: 'u_3',
-        name: 'Chef Hoàng Nam',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-        role: 'Executive Chef',
-        bio: 'Đầu bếp món Âu tại TP.HCM',
-      ),
-      title: 'Mẹo áp chảo cá hồi da giòn rụm không bị vỡ thịt 🐟',
-      content: 'Chìa khóa vàng: Phải dùng khăn giấy thấm THẬT KHÔ miếng cá trước khi cho vào chảo. Dùng chảo chống dính hoặc chảo gang thật nóng, áp mặt da trước 4 phút.',
-      imageAsset: 'assets/images/salmon.png',
-      tags: ['CáHồi', 'MẹoNấuĂn', 'HealthyCooking'],
-      createdAt: DateTime.now().subtract(const Duration(hours: 8)),
-      likesCount: 238,
-      isLiked: false,
-      comments: [
-        PostComment(
-          id: 'c_3',
-          userName: 'Thanh Hà',
-          userAvatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-          userRole: 'Member',
-          content: 'Em hay bị dính chảo rách da cá, áp dụng cách của Chef thành công mỹ mãn luôn ạ!',
-          createdAt: DateTime.now().subtract(const Duration(hours: 5)),
-          likesCount: 8,
-          isLiked: false,
-        ),
-      ],
-    ),
-    CommunityPost(
-      id: 'p_3',
-      author: const UserProfile(
-        id: 'u_4',
-        name: 'Lan Anh Eat Clean',
-        avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150',
-        role: 'Nutritionist',
-        bio: 'Chuyên gia dinh dưỡng và giảm mỡ khoa học',
-      ),
-      title: 'Đĩa Salad Ức Gà 280 calo chống ngấy ngày bận rộn 🥗',
-      content: 'Nước sốt chanh leo chua ngọt dịu là bí quyết giúp món salad ức gà không bao giờ bị nhàm chán. Vừa giàu đạm vừa thanh mát tiêu hóa tốt!',
-      imageAsset: 'assets/images/salad.png',
-      tags: ['EatClean', 'GiảmCân', 'Salad'],
-      createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      likesCount: 315,
-      isLiked: true,
-      comments: [],
     ),
   ];
 

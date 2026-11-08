@@ -17,6 +17,7 @@
 //             mỗi tick: secondsLeft > 0 → giảm 1 → notify (UI cập nhật mm:ss)
 //                       secondsLeft = 0 → huỷ Timer, dừng, gọi
 //                       `onTimerFinished` để UI hiện dialog "Hết giờ!".
+//        - `resetTimer()` (nút ↻): dừng và nạp lại thời gian của bước hiện tại.
 //
 //   3. CHUYỂN BƯỚC:
 //        - `nextStep()`: chưa phải bước cuối → sang bước kế + reset timer,
@@ -111,6 +112,12 @@ class CookingModeController extends ChangeNotifier {
     _isTimerRunning = false;
     notifyListeners();
     onTimerFinished?.call();
+  }
+
+  /// Nút ↻ trên UI: dừng đồng hồ và nạp lại thời gian của bước hiện tại.
+  void resetTimer() {
+    _resetTimerForCurrentStep();
+    notifyListeners();
   }
 
   /// Dừng timer và nạp lại thời gian theo bước hiện tại.
