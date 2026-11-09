@@ -2,7 +2,7 @@
 // MÀN HÌNH: TÚI THẦN KỲ (Kitchen Bag) — gồm 2 tab
 // =============================================================================
 //
-// FILE NÀY CHỈ CHỨA GIAO DIỆN.
+// FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng tab nằm trong `widgets/`.
 //   - Tab 1 "Tủ Lạnh Của Bạn" → logic ở `pantry_controller.dart`.
 //   - Tab 2 "Đã Lưu"          → logic ở `features/favorites/favorites_controller.dart`.
 //
@@ -17,12 +17,12 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
-import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/widgets/recipe_card.dart';
 import '../favorites/favorites_controller.dart';
 import '../suggest/suggest_screen.dart';
 import 'pantry_controller.dart';
+import 'widgets/favorites_tab.dart';
+import 'widgets/pantry_tab.dart';
 
 class KitchenBagScreen extends StatefulWidget {
   const KitchenBagScreen({super.key});
@@ -55,6 +55,15 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
       _pantryInputController.clear();
       setState(() {});
     }
+  }
+
+  void _openSuggest(List<String> pantryItems) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SuggestScreen(initialIngredients: pantryItems),
+      ),
+    );
   }
 
   @override
@@ -90,220 +99,22 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
         controller: _tabController,
         children: [
           // TAB 1: Kitchen Pantry
-          _buildPantryTab(context, pantry, pantryItems),
+          PantryTab(
+            items: pantryItems,
+            inputController: _pantryInputController,
+            onAdd: _addPantryItem,
+            onClear: () => setState(() => pantry.clear()),
+            onRemove: (item) => setState(() => pantry.removeIngredient(item)),
+            onSuggest: () => _openSuggest(pantryItems),
+          ),
 
           // TAB 2: Favorites List
-          _buildFavoritesTab(context, favRecipes),
+          FavoritesTab(
+            recipes: favRecipes,
+            onFavoriteToggled: () => setState(() {}),
+          ),
         ],
       ),
     );
   }
-
-  Widget _buildPantryTab(BuildContext context, PantryController pantry, List<String> pantryItems) {
-    return Column(
-      children: [
-        // Top description banner
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: AppColors.primary.withOpacity(0.08),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Kho nguyên liệu gia đình',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.primaryDark),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Lưu trữ những gì bạn đang có trong tủ lạnh. Bếp Việt sẽ tự động tìm các món bạn có thể nấu ngay!',
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
-              ),
-            ],
-          ),
-        ),
-
-        // Input row
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _pantryInputController,
-                  decoration: InputDecoration(
-                    hintText: 'Thêm nguyên liệu (ví dụ: Thịt bò, Trứng...)',
-                    prefixIcon: const Icon(Icons.add_shopping_cart_rounded, color: AppColors.primary),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  ),
-                  onSubmitted: (_) => _addPantryItem(),
-                ),
-              ),
-              const SizedBox(width: 8),
-              ElevatedButton(
-                onPressed: _addPantryItem,
-                child: const Text('Thêm'),
-              ),
-            ],
-          ),
-        ),
-
-        // Pantry items grid / wrap
-        Expanded(
-          child: pantryItems.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.kitchen_outlined, size: 60, color: Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'Tủ lạnh hiện đang trống',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Thêm một vài nguyên liệu để bắt đầu tìm món ăn ngon!',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Đang có ${pantryItems.length} nguyên liệu trong tủ:',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            setState(() => pantry.clear());
-                          },
-                          child: const Text('Dọn sạch tủ', style: TextStyle(color: AppColors.accent, fontSize: 12)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: pantryItems.map((item) {
-                        return Chip(
-                          avatar: const CircleAvatar(
-                            backgroundColor: AppColors.primary,
-                            radius: 10,
-                            child: Icon(Icons.check, size: 12, color: Colors.white),
-                          ),
-                          label: Text(item),
-                          deleteIcon: const Icon(Icons.close_rounded, size: 16),
-                          onDeleted: () {
-                            setState(() => pantry.removeIngredient(item));
-                          },
-                          backgroundColor: Theme.of(context).cardTheme.color,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: Theme.of(context).brightness == Brightness.dark
-                                  ? AppColors.dividerDark
-                                  : AppColors.dividerLight,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-        ),
-
-        // Bottom CTA: Suggest recipes using current pantry
-        if (pantryItems.isNotEmpty)
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).scaffoldBackgroundColor,
-              border: Border(
-                top: BorderSide(
-                  color: Theme.of(context).brightness == Brightness.dark
-                      ? AppColors.dividerDark
-                      : AppColors.dividerLight,
-                ),
-              ),
-            ),
-            child: SafeArea(
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(double.infinity, 50),
-                  backgroundColor: AppColors.primary,
-                ),
-                icon: const Icon(Icons.auto_awesome_rounded),
-                label: Text(
-                  'Gợi ý món từ ${pantryItems.length} nguyên liệu này',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SuggestScreen(initialIngredients: pantryItems),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFavoritesTab(BuildContext context, List<Recipe> favRecipes) {
-    if (favRecipes.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.favorite_border_rounded, size: 60, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            const Text(
-              'Chưa có món ăn yêu thích nào',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Nhấn vào biểu tượng trái tim trên bất kỳ món ăn nào để lưu lại tại đây.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-            ),
-          ],
-        ),
-      );
-    }
-
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: favRecipes.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
-      ),
-      itemBuilder: (context, index) {
-        return RecipeCard(
-          recipe: favRecipes[index],
-          onFavoriteToggled: () => setState(() {}),
-        );
-      },
-    );
-  }
 }
-
