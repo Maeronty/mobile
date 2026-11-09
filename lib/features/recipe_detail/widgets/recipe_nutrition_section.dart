@@ -7,7 +7,7 @@
 //   → `formatGrams` trả về số gram mới cho từng chỉ số.
 //
 // LƯU Ý
-//   Món không có dữ liệu chất xơ → mặc định 2g (giữ theo logic hiện có).
+//   Món không có dữ liệu chất xơ → hiển thị "—" (không bịa số).
 // =============================================================================
 
 import 'package:flutter/material.dart';
@@ -44,7 +44,7 @@ class RecipeNutritionSection extends StatelessWidget {
             const SizedBox(width: 8),
             RecipeNutritionBadge(title: 'Chất béo', value: '${formatGrams(nutrition.fatGrams)}g', color: Colors.orange),
             const SizedBox(width: 8),
-            RecipeNutritionBadge(title: 'Chất xơ', value: '${formatGrams(nutrition.fiberGrams ?? 2)}g', color: Colors.green),
+            RecipeNutritionBadge(title: 'Chất xơ', value: nutrition.fiberGrams == null ? '—' : '${formatGrams(nutrition.fiberGrams!)}g', color: Colors.green),
           ],
         ),
       ],
