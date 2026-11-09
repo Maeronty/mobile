@@ -32,6 +32,7 @@ class AppColors {
 
   // Difficulty Badges
   static const Color easy = Color(0xFF22C55E);
+  static const Color success = Color(0xFF22C55E);
   static const Color medium = Color(0xFFF59E0B);
   static const Color hard = Color(0xFFEF4444);
 
