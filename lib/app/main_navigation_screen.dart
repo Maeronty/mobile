@@ -31,6 +31,18 @@ class MainNavigationScreen extends StatefulWidget {
 
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      HomeScreen(onNavigateTab: _navigateToTab),
+      const SuggestScreen(),
+      const KitchenBagScreen(),
+      const ProfileScreen(),
+    ];
+  }
 
   void _navigateToTab(int index) {
     setState(() {
@@ -40,17 +52,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      HomeScreen(onNavigateTab: _navigateToTab),
-      const SuggestScreen(),
-      const KitchenBagScreen(),
-      const ProfileScreen(),
-    ];
-
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
-        children: screens,
+        children: _screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
