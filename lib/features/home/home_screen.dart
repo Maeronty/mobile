@@ -118,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
               theme.isDarkMode ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
               color: AppColors.primary,
             ),
-            onPressed: () => setState(() => theme.toggleTheme()),
+            onPressed: theme.toggleTheme,
           ),
           const SizedBox(width: 8),
         ],
@@ -158,16 +158,20 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
                       const SizedBox(width: 10),
-                      Text(
-                        'Tìm công thức hoặc nguyên liệu tủ lạnh...',
-                        style: TextStyle(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? AppColors.textMutedDark
-                              : AppColors.textMutedLight,
-                          fontSize: 14,
+                      Expanded(
+                        child: Text(
+                          'Tìm công thức hoặc nguyên liệu...',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMutedLight,
+                            fontSize: 14,
+                          ),
                         ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(

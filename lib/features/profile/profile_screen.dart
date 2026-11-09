@@ -61,7 +61,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         actions: [
           IconButton(
             icon: Icon(isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded),
-            onPressed: () => setState(() => theme.toggleTheme()),
+            onPressed: theme.toggleTheme,
           ),
         ],
       ),
@@ -237,7 +237,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     title: const Text('Giao diện tối (Dark Mode)'),
                     value: isDark,
                     activeThumbColor: AppColors.primary,
-                    onChanged: (val) => setState(() => theme.toggleTheme()),
+                    onChanged: (_) => theme.toggleTheme(),
                   ),
                 ],
               ),
