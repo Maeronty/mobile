@@ -1,0 +1,10 @@
+# Bí mật và dữ liệu local: KHÔNG commit
+.env
+# Chỉ thư mục database ở gốc backend; app/data/ chứa file seed và phải được commit.
+/data/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
