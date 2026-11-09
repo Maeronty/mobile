@@ -17,7 +17,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/mystery_plate_icon.dart';
 import '../../core/widgets/recipe_card.dart';
+import '../surprise_me/surprise_me_screen.dart';
 import '../theme/theme_controller.dart';
 import 'home_controller.dart';
 
@@ -348,6 +350,76 @@ class _HomeScreenState extends State<HomeScreen> {
                             SizedBox(height: 2),
                             Text(
                               'Nhập nguyên liệu để Bếp Việt gợi ý món ngon tức thì',
+                              style: TextStyle(color: Colors.white70, fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Surprise Me Quick Action Card
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const SurpriseMeScreen(),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFEA580C), Color(0xFFF97316)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFEA580C).withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const MysteryPlateIcon(color: Colors.white, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      const Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Hôm nay ăn gì? • Surprise Me',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Chọn thể loại hoặc để đầu bếp bí mật chọn ngẫu nhiên món ngon!',
                               style: TextStyle(color: Colors.white70, fontSize: 12),
                             ),
                           ],
