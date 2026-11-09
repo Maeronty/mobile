@@ -49,3 +49,5 @@ app.*.map.json
 
 # CodeGraph index (local only)
 .codegraph/
+.omp/
+AGENTS.md
