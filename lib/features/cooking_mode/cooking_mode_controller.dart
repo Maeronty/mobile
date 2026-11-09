@@ -68,7 +68,7 @@ class CookingModeController extends ChangeNotifier {
   bool get isLastStep => _currentStepIndex == totalSteps - 1;
 
   /// Tiến độ 0.0 → 1.0 cho thanh progress.
-  double get progress => (_currentStepIndex + 1) / totalSteps;
+  double get progress => totalSteps == 0 ? 0 : (_currentStepIndex + 1) / totalSteps;
 
   int get secondsLeft => _secondsLeft;
   bool get isTimerRunning => _isTimerRunning;
@@ -95,6 +95,8 @@ class CookingModeController extends ChangeNotifier {
       return;
     }
 
+    // Hết giờ rồi bấm Play lại → nạp lại thời gian, không bắn dialog "Hết giờ!" ngay.
+    if (_secondsLeft == 0) _resetTimerForCurrentStep();
     _isTimerRunning = true;
     notifyListeners();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
@@ -123,7 +125,8 @@ class CookingModeController extends ChangeNotifier {
   /// Dừng timer và nạp lại thời gian theo bước hiện tại.
   void _resetTimerForCurrentStep() {
     _timer?.cancel();
-    _secondsLeft = (currentStep.estimatedMinutes ?? defaultStepMinutes) * 60;
+    final minutes = recipe.instructions.isEmpty ? null : currentStep.estimatedMinutes;
+    _secondsLeft = (minutes ?? defaultStepMinutes) * 60;
     _isTimerRunning = false;
     _isVoiceSpeaking = false;
   }

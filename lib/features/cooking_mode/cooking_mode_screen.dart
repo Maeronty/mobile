@@ -101,6 +101,13 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
     final stepNumber = _controller.currentStepIndex + 1;
     final totalSteps = _controller.totalSteps;
 
+    if (totalSteps == 0) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.recipe.title)),
+        body: const Center(child: Text('Công thức này chưa có các bước thực hiện.')),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A), // Dark focused background
       appBar: AppBar(
