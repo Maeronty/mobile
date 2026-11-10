@@ -23,6 +23,18 @@ pub struct Claims {
     pub exp: usize,
 }
 
+impl Claims {
+    /// Parses the `sub` claim into a user id.
+    ///
+    /// # Errors
+    /// Returns [`AppError::Unauthorized`] when `sub` is not an integer.
+    pub fn user_id(&self) -> Result<i64, AppError> {
+        self.sub
+            .parse()
+            .map_err(|_| AppError::Unauthorized("ID người dùng không hợp lệ.".to_string()))
+    }
+}
+
 pub fn validate_email(email: &str) -> Result<(), AppError> {
     let trimmed = email.trim();
     if trimmed.len() < 5 || !trimmed.contains('@') || !trimmed.contains('.') {
@@ -75,6 +87,20 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
             Err(_) => false,
         }
     }
+}
+
+/// Runs [`hash_password`] on the blocking pool; Argon2 would otherwise stall the async runtime.
+pub async fn hash_password_blocking(password: String) -> Result<String, AppError> {
+    tokio::task::spawn_blocking(move || hash_password(&password))
+        .await
+        .map_err(|e| AppError::Internal(format!("Lỗi mã hóa mật khẩu: {e}")))?
+}
+
+/// Runs [`verify_password`] on the blocking pool.
+pub async fn verify_password_blocking(password: String, hash: String) -> Result<bool, AppError> {
+    tokio::task::spawn_blocking(move || verify_password(&password, &hash))
+        .await
+        .map_err(|e| AppError::Internal(format!("Lỗi xác thực mật khẩu: {e}")))
 }
 
 pub fn generate_jwt(

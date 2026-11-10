@@ -20,7 +20,7 @@
 //! `featured`: mỗi danh mục tiêu biểu 1 món Việt có ảnh, cho banner Home.
 //! =============================================================================
 
-use sqlx::SqlitePool;
+use sqlx::{QueryBuilder, SqlitePool};
 
 use crate::error::AppError;
 use crate::models::{CategoryCountDto, PageQuery, RecipeCardDto, RecipePageDto};
@@ -76,13 +76,17 @@ pub async fn page_recipes(pool: &SqlitePool, q: &PageQuery) -> Result<RecipePage
                 .map(|(id, _)| id)
                 .collect();
             let page_ids: Vec<i64> = matched.iter().skip(offset as usize).take(page_size as usize).copied().collect();
-            let mut items = Vec::with_capacity(page_ids.len());
-            for id in &page_ids {
-                let item: RecipeCardDto = sqlx::query_as(&format!("{CARD_SELECT} WHERE r.id = ?"))
-                    .bind(id)
-                    .fetch_one(pool)
-                    .await?;
-                items.push(item);
+            // `page_ids` already follow CARD_ORDER, so re-applying it keeps the page order.
+            let mut items: Vec<RecipeCardDto> = Vec::new();
+            if !page_ids.is_empty() {
+                let mut qb = QueryBuilder::new(format!("{CARD_SELECT} WHERE r.id IN ("));
+                let mut ids = qb.separated(", ");
+                for id in &page_ids {
+                    ids.push_bind(*id);
+                }
+                ids.push_unseparated(")");
+                qb.push(CARD_ORDER);
+                items = qb.build_query_as().fetch_all(pool).await?;
             }
             (items, matched.len() as i64)
         }
