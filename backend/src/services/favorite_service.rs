@@ -87,11 +87,15 @@ pub async fn get_user_favorites(
         return Ok(vec![]);
     }
 
-    let ingredients: Vec<RecipeIngredient> =
-        sqlx::query_as("SELECT * FROM recipe_ingredients ORDER BY sort_order ASC, id ASC")
-            .fetch_all(pool)
-            .await
-            .map_err(AppError::Database)?;
+    let ingredients: Vec<RecipeIngredient> = sqlx::query_as(
+        "SELECT * FROM recipe_ingredients \
+         WHERE recipe_id IN (SELECT recipe_id FROM user_favorites WHERE user_id = ?) \
+         ORDER BY sort_order ASC, id ASC",
+    )
+    .bind(user_id)
+    .fetch_all(pool)
+    .await
+    .map_err(AppError::Database)?;
 
     let mut ing_names_map: HashMap<i64, Vec<String>> = HashMap::new();
     for ing in ingredients {
@@ -153,40 +157,26 @@ pub async fn sync_favorites(
         ));
     }
 
-    // 3. Validate existence against recipes table
-    let mut valid_ids = Vec::new();
+    // 3. Insert only ids that exist in `recipes`: one statement per chunk, all-or-nothing.
+    let now = Utc::now().to_rfc3339();
+    let mut tx = pool.begin().await.map_err(AppError::Database)?;
+    let mut synced_count: usize = 0;
+
     for chunk in unique_ids.chunks(100) {
-        let placeholders = chunk.iter().map(|_| "?").collect::<Vec<_>>().join(",");
-        let query_str = format!("SELECT id FROM recipes WHERE id IN ({})", placeholders);
-        let mut q = sqlx::query_as::<_, (i64,)>(&query_str);
+        let placeholders = vec!["?"; chunk.len()].join(",");
+        let sql = format!(
+            "INSERT OR IGNORE INTO user_favorites (user_id, recipe_id, created_at) \
+             SELECT ?, id, ? FROM recipes WHERE id IN ({placeholders})"
+        );
+        let mut q = sqlx::query(&sql).bind(user_id).bind(&now);
         for id in chunk {
             q = q.bind(*id);
         }
-        let rows = q.fetch_all(pool).await.map_err(AppError::Database)?;
-        for (valid_id,) in rows {
-            valid_ids.push(valid_id);
-        }
+        let res = q.execute(&mut *tx).await.map_err(AppError::Database)?;
+        synced_count += res.rows_affected() as usize;
     }
 
-    // 4. Batch insert using INSERT OR IGNORE
-    let now = Utc::now().to_rfc3339();
-    let mut synced_count: usize = 0;
-
-    for rid in valid_ids {
-        let res = sqlx::query(
-            "INSERT OR IGNORE INTO user_favorites (user_id, recipe_id, created_at) VALUES (?, ?, ?)",
-        )
-        .bind(user_id)
-        .bind(rid)
-        .bind(&now)
-        .execute(pool)
-        .await
-        .map_err(AppError::Database)?;
-
-        if res.rows_affected() > 0 {
-            synced_count += 1;
-        }
-    }
+    tx.commit().await.map_err(AppError::Database)?;
 
     Ok(SyncFavoritesResponse {
         message: "Favorites synchronized".to_string(),

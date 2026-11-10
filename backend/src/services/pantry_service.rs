@@ -203,8 +203,8 @@ pub async fn add_pantry_item(
             ));
         }
 
-        let mut first_dto = None;
         let count = valid_names.len();
+        let mut dtos = Vec::with_capacity(count);
         for name in valid_names {
             let single_req = CreatePantryItemRequest {
                 name: Some(name),
@@ -214,14 +214,14 @@ pub async fn add_pantry_item(
                 category: req.category.clone(),
                 names: None,
             };
-            let dto = upsert_single_item(pool, user_id, single_req).await?;
-            if first_dto.is_none() {
-                first_dto = Some(dto);
-            }
+            dtos.push(upsert_single_item(pool, user_id, single_req).await?);
         }
 
-        let dto = first_dto.unwrap();
-        let msg = format!("Đã thêm {} nguyên liệu vào tủ lạnh thành công.", count);
+        let dto = dtos
+            .into_iter()
+            .next()
+            .expect("valid_names is non-empty, so at least one item was upserted");
+        let msg = format!("Đã thêm {count} nguyên liệu vào tủ lạnh thành công.");
         Ok((dto, msg))
     } else {
         let dto = upsert_single_item(pool, user_id, req).await?;
@@ -254,23 +254,17 @@ pub async fn add_pantry_payload(
     }
 
     let count = dtos.len();
-    if count == 1 {
-        let item = dtos.first().cloned();
-        Ok(AddPantryResponse {
-            message: "Đã thêm nguyên liệu vào tủ lạnh thành công.".to_string(),
-            item: item.clone(),
-            items: Some(dtos),
-            count: Some(1),
-        })
+    let message = if count == 1 {
+        "Đã thêm nguyên liệu vào tủ lạnh thành công.".to_string()
     } else {
-        let first_item = dtos.first().cloned();
-        Ok(AddPantryResponse {
-            message: format!("Đã thêm {} nguyên liệu vào tủ lạnh thành công.", count),
-            item: first_item,
-            items: Some(dtos),
-            count: Some(count),
-        })
-    }
+        format!("Đã thêm {count} nguyên liệu vào tủ lạnh thành công.")
+    };
+    Ok(AddPantryResponse {
+        message,
+        item: dtos.first().cloned(),
+        items: Some(dtos),
+        count: Some(count),
+    })
 }
 
 /// Update an existing pantry item with ownership verification
@@ -361,35 +355,20 @@ pub async fn delete_pantry_item(
 ) -> Result<(), AppError> {
     verify_user_exists(pool, user_id).await?;
 
-    let existing: Option<PantryItem> = sqlx::query_as(
-        r#"
-        SELECT id, user_id, name, amount, unit, category, created_at, updated_at
-        FROM pantry_items
-        WHERE id = ?
-        "#,
-    )
-    .bind(item_id)
-    .fetch_optional(pool)
-    .await
-    .map_err(AppError::Database)?;
+    let res = sqlx::query("DELETE FROM pantry_items WHERE id = ? AND user_id = ?")
+        .bind(item_id)
+        .bind(user_id)
+        .execute(pool)
+        .await
+        .map_err(AppError::Database)?;
 
-    match existing {
-        None => Err(AppError::NotFound(
+    // Another user's item is reported the same as a missing one.
+    if res.rows_affected() == 0 {
+        return Err(AppError::NotFound(
             "Không tìm thấy nguyên liệu trong tủ lạnh.".to_string(),
-        )),
-        Some(item) if item.user_id != user_id => Err(AppError::NotFound(
-            "Không tìm thấy nguyên liệu trong tủ lạnh.".to_string(),
-        )),
-        Some(_) => {
-            sqlx::query("DELETE FROM pantry_items WHERE id = ? AND user_id = ?")
-                .bind(item_id)
-                .bind(user_id)
-                .execute(pool)
-                .await
-                .map_err(AppError::Database)?;
-            Ok(())
-        }
+        ));
     }
+    Ok(())
 }
 
 /// Delete an item matching normalized name for user
