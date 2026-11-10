@@ -116,6 +116,8 @@ pub fn create_app(state: AppState) -> Router {
         .route("/api/recipes/:id", get(handlers::recipe::get_recipe_by_id))
         .route("/suggest", post(handlers::recipe::suggest))
         .route("/api/suggest", post(handlers::recipe::suggest))
+        // Proxy ảnh cho Flutter Web (ảnh nguồn không có header CORS)
+        .route("/api/image", get(handlers::image::proxy_image))
         // AI routes (Gemini + Spoonacular, cần đăng nhập). Ảnh base64 ≤ 3 MB gốc
         // ≈ 4 MB JSON, vượt giới hạn 2 MB mặc định của axum nên nới riêng route này.
         .route(

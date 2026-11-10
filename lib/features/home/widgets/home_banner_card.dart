@@ -10,6 +10,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/api_client.dart';
 import '../../../core/theme/app_colors.dart';
 
 class HomeBannerCard extends StatelessWidget {
@@ -28,7 +29,7 @@ class HomeBannerCard extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              banner['image']!,
+              ApiClient.imageUrl(banner['image']!),
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 color: AppColors.primaryDark,

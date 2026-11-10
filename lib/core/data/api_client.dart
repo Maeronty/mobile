@@ -52,6 +52,14 @@ class ApiClient {
   /// Token JWT hiện tại; AuthController đặt khi đăng nhập, xoá khi đăng xuất.
   String? token;
 
+  /// Link ảnh để hiển thị. Trên web, ảnh từ monngonmoingay.com /
+  /// img.spoonacular.com bị trình duyệt chặn vì thiếu header CORS → đi qua
+  /// proxy `/api/image` của backend. Mobile/desktop dùng thẳng link gốc.
+  static String imageUrl(String url) {
+    if (!kIsWeb || !url.startsWith('http')) return url;
+    return '${instance.baseUrl}/api/image?url=${Uri.encodeQueryComponent(url)}';
+  }
+
   static String defaultBaseUrl() {
     if (_definedBaseUrl.isNotEmpty) return _definedBaseUrl;
     final isAndroid = !kIsWeb && defaultTargetPlatform == TargetPlatform.android;

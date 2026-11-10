@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 
+import '../data/api_client.dart';
 import '../models/recipe.dart';
 import '../theme/app_colors.dart';
 import '../../features/favorites/favorites_controller.dart';
@@ -80,7 +81,7 @@ class RecipeCard extends StatelessWidget {
             AspectRatio(
               aspectRatio: 16 / 10,
               child: Image.network(
-                recipe.imageAsset,
+                ApiClient.imageUrl(recipe.imageAsset),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey.shade200,
@@ -304,7 +305,7 @@ class RecipeCard extends StatelessWidget {
             fit: StackFit.expand,
             children: [
               Image.network(
-                recipe.imageAsset,
+                ApiClient.imageUrl(recipe.imageAsset),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey.shade200,
