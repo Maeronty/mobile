@@ -6,7 +6,11 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/data/recipe_repository.dart';
+import '../../core/theme/app_colors.dart';
+import '../kitchen_bag/pantry_controller.dart';
 import '../recipe_detail/recipe_detail_screen.dart';
+import 'ingredient_camera_scanner_screen.dart';
+import 'ingredient_vision_service.dart';
 
 class AiSuggestScreen extends StatefulWidget {
   const AiSuggestScreen({
@@ -14,11 +18,15 @@ class AiSuggestScreen extends StatefulWidget {
     required this.ingredients,
     this.initialRecipes,
     this.client,
+    this.visionService,
+    this.onScanWithCamera,
   });
 
   final List<String> ingredients;
   final List<Map<String, dynamic>>? initialRecipes;
   final http.Client? client;
+  final IngredientVisionService? visionService;
+  final Future<XFile?> Function()? onScanWithCamera;
 
   @override
   State<AiSuggestScreen> createState() => _AiSuggestScreenState();
@@ -32,8 +40,11 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
   final picker = ImagePicker();
   late final http.Client client;
   late final bool _ownsClient;
+  late final IngredientVisionService _visionService;
+  late final bool _ownsVision;
   late final input = TextEditingController(text: widget.ingredients.join(', '));
   List<Map<String, dynamic>> recipes = [];
+  ScannedImage? _scannedImage;
   String? message;
   bool busy = false;
 
@@ -42,20 +53,27 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
     super.initState();
     _ownsClient = widget.client == null;
     client = widget.client ?? http.Client();
+    _ownsVision = widget.visionService == null;
+    _visionService =
+        widget.visionService ?? IngredientVisionService(httpClient: client);
     if (widget.initialRecipes != null) {
       recipes = List<Map<String, dynamic>>.from(widget.initialRecipes!);
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      run(() async {
-        final lost = await picker.retrieveLostData();
-        if (lost.files?.isNotEmpty == true) await analyze(lost.files!.first);
-      });
+      picker.retrieveLostData().then((lost) {
+        if (mounted && lost.files?.isNotEmpty == true) {
+          run(() => analyze(lost.files!.first));
+        }
+      }).catchError((_) {});
     }
   }
 
   @override
   void dispose() {
     input.dispose();
+    if (_ownsVision) {
+      _visionService.dispose();
+    }
     if (_ownsClient) {
       client.close();
     }
@@ -99,37 +117,28 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
     } on FormatException catch (e) {
       if (mounted) message = e.message;
     } catch (_) {
-      if (mounted) message = 'Không thể hoàn tất. Kiểm tra kết nối máy chủ hoặc quyền truy cập ảnh, rồi thử lại.';
+      if (mounted) {
+        message =
+            'Không thể hoàn tất. Kiểm tra kết nối mạng/máy chủ hoặc quyền truy cập camera, rồi thử lại.';
+      }
     } finally {
       if (mounted) setState(() => busy = false);
     }
   }
 
   Future<void> analyze(XFile file) async {
-    if (await file.length() > 3 * 1024 * 1024) {
-      throw const FormatException('Hãy chọn ảnh nhỏ hơn 3 MB.');
-    }
-    final bytes = await file.readAsBytes();
-    final mime = bytes.length < 12
-        ? null
-        : bytes[0] == 0xff && bytes[1] == 0xd8
-        ? 'image/jpeg'
-        : bytes[0] == 0x89 && bytes[1] == 0x50
-        ? 'image/png'
-        : ascii.decode(bytes.sublist(8, 12), allowInvalid: true) == 'WEBP'
-        ? 'image/webp'
-        : null;
-    if (mime == null) {
-      throw const FormatException('Hãy chọn ảnh JPG, PNG hoặc WebP.');
-    }
-    final found = (await post('recognize', {
-      'mime': mime,
-      'data': base64Encode(bytes),
-    })).cast<String>();
+    final validated = await IngredientVisionService.validateAndRead(file);
+    if (!mounted) return;
+    setState(() {
+      _scannedImage = validated;
+      recipes = [];
+    });
+
+    final found = await _visionService.recognizeIngredients(validated);
     if (!mounted) return;
     if (found.isEmpty) {
       message =
-          'Gemini chưa nhận ra nguyên liệu. Hãy chụp gần hơn hoặc nhập tên.';
+          'Gemini chưa nhận ra nguyên liệu trong ảnh. Hãy chụp gần hơn hoặc nhập tên.';
       return;
     }
     final combined = {
@@ -138,41 +147,87 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
     input.text = combined.values.join(', ');
     recipes = [];
     message =
-        'Gemini nhận diện: ${found.join(', ')}. Bạn có thể sửa trước khi tìm món.';
+        'Gemini nhận diện: ${found.join(', ')}. Bạn có thể chỉnh sửa trước khi tìm món.';
   }
 
-  Future<void> pick(ImageSource source) => run(() async {
-    final file = await picker.pickImage(
-      source: source,
-      maxWidth: 1280,
-      maxHeight: 1280,
-      imageQuality: 82,
-      requestFullMetadata: false,
+  Future<void> _scanWithCamera() => run(() async {
+        final XFile? file;
+        if (widget.onScanWithCamera != null) {
+          file = await widget.onScanWithCamera!();
+        } else {
+          file = await Navigator.push<XFile?>(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const IngredientCameraScannerScreen(),
+            ),
+          );
+        }
+        if (file != null && mounted) await analyze(file);
+      });
+
+  Future<void> _pickFromGallery() => run(() async {
+        final file = await picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1280,
+          maxHeight: 1280,
+          imageQuality: 82,
+          requestFullMetadata: false,
+        );
+        if (file != null && mounted) await analyze(file);
+      });
+
+  void _removeIngredient(String name) {
+    final updated = ingredients
+        .where((item) => item.toLowerCase() != name.toLowerCase())
+        .toList();
+    setState(() {
+      input.text = updated.join(', ');
+      recipes = [];
+      message = null;
+    });
+  }
+
+  void _saveToPantry() {
+    final items = ingredients;
+    if (items.isEmpty) return;
+    for (final item in items) {
+      PantryController.instance.addIngredient(item);
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Đã thêm ${items.length} nguyên liệu vào Túi Thần Kỳ.'),
+        backgroundColor: AppColors.primary,
+      ),
     );
-    if (file != null && mounted) await analyze(file);
-  });
+  }
 
   Future<void> suggest() => run(() async {
-    final terms = ingredients;
-    if (terms.isEmpty) {
-      throw const FormatException('Hãy thêm ít nhất một nguyên liệu.');
-    }
-    recipes = [];
-    final data = await post('suggest', {'ingredients': terms});
-    if (!mounted) return;
-    recipes = data.cast<Map<String, dynamic>>();
-    if (recipes.isEmpty) {
-      message = 'Chưa tìm thấy món phù hợp. Hãy đổi danh sách nguyên liệu.';
-    }
-  });
+        final terms = ingredients;
+        if (terms.isEmpty) {
+          throw const FormatException('Hãy thêm ít nhất một nguyên liệu.');
+        }
+        recipes = [];
+        final data = await post('suggest', {'ingredients': terms});
+        if (!mounted) return;
+        recipes = data.cast<Map<String, dynamic>>();
+        if (recipes.isEmpty) {
+          message =
+              'Chưa tìm thấy món phù hợp. Hãy đổi danh sách nguyên liệu.';
+        }
+      });
 
   void _openRecipeDetail(Map<String, dynamic> suggestion) {
     final rawId = suggestion['id'];
-    final int id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? 0;
+    final int id =
+        rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? 0;
     final title = suggestion['title'] as String? ?? 'Món gợi ý';
     final reason = suggestion['reason'] as String?;
-    final used = (suggestion['used'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];
-    final missing = (suggestion['missing'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];
+    final used =
+        (suggestion['used'] as List?)?.map((e) => e.toString()).toList() ??
+            <String>[];
+    final missing =
+        (suggestion['missing'] as List?)?.map((e) => e.toString()).toList() ??
+            <String>[];
 
     var recipe = RecipeRepository.instance.findByIdOrNull(id);
     if (recipe == null) {
@@ -201,10 +256,7 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final camera =
-        kIsWeb ||
-        defaultTargetPlatform == TargetPlatform.android ||
-        defaultTargetPlatform == TargetPlatform.iOS;
+    final currentIngredients = ingredients;
     return Scaffold(
       appBar: AppBar(title: const Text('Gợi ý với Gemini')),
       body: ListView(
@@ -224,26 +276,83 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
               message = null;
             }),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Ảnh bạn chọn sẽ được gửi đến Gemini để nhận diện nguyên liệu.',
-          ),
+          if (currentIngredients.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                for (final item in currentIngredients)
+                  InputChip(
+                    visualDensity: VisualDensity.compact,
+                    label: Text(item),
+                    onDeleted: busy ? null : () => _removeIngredient(item),
+                  ),
+                ActionChip(
+                  visualDensity: VisualDensity.compact,
+                  avatar: const Icon(Icons.kitchen_outlined, size: 16),
+                  label: const Text('Lưu vào Tủ lạnh'),
+                  onPressed: busy ? null : _saveToPantry,
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 10),
           Wrap(
             spacing: 8,
+            runSpacing: 8,
             children: [
-              if (camera)
-                OutlinedButton.icon(
-                  onPressed: busy ? null : () => pick(ImageSource.camera),
-                  icon: const Icon(Icons.camera_alt),
-                  label: const Text('Chụp ảnh'),
-                ),
+              FilledButton.tonalIcon(
+                onPressed: busy ? null : _scanWithCamera,
+                icon: const Icon(Icons.camera_alt_rounded),
+                label: const Text('Quét bằng Camera'),
+              ),
               OutlinedButton.icon(
-                onPressed: busy ? null : () => pick(ImageSource.gallery),
-                icon: const Icon(Icons.photo_library),
+                onPressed: busy ? null : _pickFromGallery,
+                icon: const Icon(Icons.photo_library_rounded),
                 label: const Text('Chọn ảnh'),
               ),
             ],
           ),
+          if (_scannedImage != null) ...[
+            const SizedBox(height: 12),
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.memory(
+                    _scannedImage!.bytes,
+                    height: 160,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 160,
+                      color: Colors.grey.shade200,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_outlined, size: 40),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Material(
+                    color: Colors.black54,
+                    shape: const CircleBorder(),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 18),
+                      tooltip: 'Xóa ảnh xem trước',
+                      onPressed: busy
+                          ? null
+                          : () => setState(() => _scannedImage = null),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: busy ? null : suggest,
             icon: const Icon(Icons.auto_awesome),
@@ -280,7 +389,9 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                if (recipe['reason'] != null && (recipe['reason'] as String).isNotEmpty) ...[
+                                if (recipe['reason'] != null &&
+                                    (recipe['reason'] as String)
+                                        .isNotEmpty) ...[
                                   const SizedBox(height: 4),
                                   Text(
                                     recipe['reason'] as String,
@@ -293,7 +404,8 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
                               ],
                             ),
                           ),
-                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                          const Icon(Icons.arrow_forward_ios,
+                              size: 16, color: Colors.grey),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -309,7 +421,8 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
                         ),
                       Text(
                         'Nguồn: Spoonacular · #${recipe['id']}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        style: TextStyle(
+                            fontSize: 12, color: Colors.grey.shade600),
                       ),
                       const SizedBox(height: 12),
                       SizedBox(

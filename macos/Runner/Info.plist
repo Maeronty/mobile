@@ -28,5 +28,7 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Chụp hoặc quét nguyên liệu để gửi Gemini nhận diện.</string>
 </dict>
 </plist>

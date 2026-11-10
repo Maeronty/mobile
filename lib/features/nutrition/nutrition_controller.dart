@@ -22,13 +22,13 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../core/data/recipe_repository.dart';
 import '../../core/models/meal_plan.dart';
+import '../../core/services/gemini_api_client.dart';
 
 /// Một lựa chọn hiển thị dạng chip (đối tượng hoặc mục tiêu).
 class NutritionOption {
@@ -61,12 +61,7 @@ class NutritionController extends ChangeNotifier {
     NutritionOption('Eat Clean', 'Eat Clean', 'Thanh lọc cơ thể'),
   ];
 
-  final http.Client _client;
-  final List<String> _apiKeys;
-  final String _model;
-  final String _baseUrl;
-  final bool _ownsClient;
-  final Map<String, DateTime> _keyCooldowns = {};
+  final GeminiApiClient _gemini;
 
   NutritionController({
     http.Client? client,
@@ -74,39 +69,16 @@ class NutritionController extends ChangeNotifier {
     List<String>? apiKeys,
     String? model,
     String? baseUrl,
-  })  : _client = client ?? http.Client(),
-        _apiKeys = _resolveApiKeys(apiKey: apiKey, apiKeys: apiKeys),
-        _model = _resolveModel(model),
-        _baseUrl = baseUrl ??
-            const String.fromEnvironment('GEMINI_BASE_URL',
-                defaultValue:
-                    'https://generativelanguage.googleapis.com/v1beta'),
-        _ownsClient = client == null {
+    GeminiApiClient? geminiClient,
+  }) : _gemini = geminiClient ??
+            GeminiApiClient(
+              client: client,
+              apiKey: apiKey,
+              apiKeys: apiKeys,
+              model: model,
+              baseUrl: baseUrl,
+            ) {
     _currentPlan = _buildInitialPlan();
-  }
-
-  static List<String> _resolveApiKeys({String? apiKey, List<String>? apiKeys}) {
-    final Iterable<String> raw;
-    if (apiKeys != null) {
-      raw = apiKeys;
-    } else if (apiKey != null) {
-      raw = apiKey.split(',');
-    } else {
-      const envKeys = String.fromEnvironment('GEMINI_API_KEYS');
-      const envKey = String.fromEnvironment('GEMINI_API_KEY');
-      raw = [
-        ...envKeys.split(','),
-        ...envKey.split(','),
-      ];
-    }
-    return raw.map((k) => k.trim()).where((k) => k.isNotEmpty).toSet().toList();
-  }
-
-  static String _resolveModel(String? model) {
-    final trimmed = model?.trim();
-    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
-    const envModel = String.fromEnvironment('GEMINI_MODEL');
-    return envModel.trim().isNotEmpty ? envModel.trim() : 'gemini-3.8-flash';
   }
 
   String _selectedTargetGroup = 'Gia đình (4 người)';
@@ -151,11 +123,6 @@ class NutritionController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_apiKeys.isEmpty) {
-        throw const HttpException(
-            'Chưa cấu hình GEMINI_API_KEY. Vui lòng cung cấp khóa API.');
-      }
-
       final plan = await _fetchMealPlanFromGemini();
       if (_disposed) return false;
 
@@ -167,7 +134,13 @@ class NutritionController extends ChangeNotifier {
     } catch (e) {
       if (_disposed) return false;
       _isLoading = false;
-      _errorMessage = _resolveErrorMessage(e);
+      _errorMessage = GeminiApiClient.resolveErrorMessage(
+        e,
+        timeoutMessage:
+            'Yêu cầu tạo thực đơn từ Gemini đã hết thời gian chờ. Vui lòng thử lại.',
+        fallbackMessage:
+            'Đã xảy ra lỗi khi tạo thực đơn từ Gemini. Vui lòng thử lại sau.',
+      );
       notifyListeners();
       return false;
     }
@@ -175,106 +148,16 @@ class NutritionController extends ChangeNotifier {
 
   Future<MealPlan> _fetchMealPlanFromGemini() async {
     final prompt = _buildPrompt(_selectedTargetGroup, _selectedHealthGoal);
-    final url = Uri.parse('$_baseUrl/models/$_model:generateContent');
-    final payload = jsonEncode({
-      'contents': [
-        {
-          'parts': [
-            {'text': prompt}
-          ]
-        }
+    final rawJsonText = await _gemini.generateJsonText(
+      parts: [
+        {'text': prompt}
       ],
-      'generationConfig': {
-        'responseMimeType': 'application/json',
-      }
-    });
-
-    final response = await _postWithKeyRotation(url, payload);
-
-    if (response.statusCode != 200) {
-      _handleHttpError(response.statusCode, response.body);
-    }
-
-    final Map<String, dynamic> body =
-        jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
-    final candidates = body['candidates'] as List?;
-    if (candidates == null || candidates.isEmpty) {
-      throw const FormatException('Gemini không trả về kết quả nào.');
-    }
-
-    final parts = candidates[0]['content']?['parts'] as List?;
-    if (parts == null || parts.isEmpty) {
-      throw const FormatException('Nội dung phản hồi từ Gemini trống.');
-    }
-
-    final rawJsonText = parts
-        .where((p) => p is Map && p['thought'] != true)
-        .map((p) => (p as Map)['text'] as String? ?? '')
-        .join()
-        .trim();
-
+    );
     return _parseMealPlan(rawJsonText);
   }
 
-  Future<http.Response> _postWithKeyRotation(Uri url, String payload) async {
-    http.Response? last429Response;
-    final now = DateTime.now();
-
-    for (final key in _apiKeys) {
-      final cooldownUntil = _keyCooldowns[key];
-      if (cooldownUntil != null && cooldownUntil.isAfter(now)) {
-        continue;
-      }
-
-      final response = await _client
-          .post(
-            url,
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': key,
-            },
-            body: payload,
-          )
-          .timeout(const Duration(seconds: 90));
-
-      if (response.statusCode != 429) {
-        return response;
-      }
-
-      _keyCooldowns[key] =
-          DateTime.now().add(_retryDelayFromHeaders(response.headers));
-      last429Response = response;
-    }
-
-    if (last429Response != null) {
-      return last429Response;
-    }
-
-    throw const HttpException(
-        'Các khóa Gemini đều đang bị giới hạn (429). Vui lòng thử lại sau.');
-  }
-
-  Duration _retryDelayFromHeaders(Map<String, String> headers) {
-    final retryAfter = headers['retry-after']?.trim();
-    if (retryAfter != null && retryAfter.isNotEmpty) {
-      final seconds = int.tryParse(retryAfter);
-      if (seconds != null && seconds > 0) {
-        return Duration(seconds: seconds);
-      }
-      try {
-        final diff = HttpDate.parse(retryAfter).difference(DateTime.now());
-        if (!diff.isNegative && diff.inSeconds > 0) return diff;
-      } catch (_) {}
-    }
-    return const Duration(seconds: 60);
-  }
-
   MealPlan _parseMealPlan(String rawJson) {
-    String clean = rawJson;
-    if (clean.startsWith('```json')) clean = clean.substring(7);
-    if (clean.startsWith('```')) clean = clean.substring(3);
-    if (clean.endsWith('```')) clean = clean.substring(0, clean.length - 3);
-    clean = clean.trim();
+    final clean = GeminiApiClient.stripMarkdownCodeFence(rawJson);
 
     final data = jsonDecode(clean) as Map<String, dynamic>;
     const defaultDays = [
@@ -398,51 +281,6 @@ Bắt buộc trả về đúng định dạng JSON:
 ''';
   }
 
-  void _handleHttpError(int statusCode, String body) {
-    String? detail;
-    try {
-      final err = jsonDecode(body);
-      detail = err['error']?['message'] as String?;
-    } catch (_) {}
-
-    if (statusCode == 429) {
-      throw HttpException(
-          detail != null
-              ? 'Lỗi 429: $detail'
-              : 'Gemini API vượt quá giới hạn lượt gọi hoặc hết hạn mức (429).');
-    } else if (statusCode == 401 || statusCode == 403) {
-      throw HttpException(
-          detail != null
-              ? 'Lỗi $statusCode: $detail'
-              : 'Khóa API Gemini không hợp lệ hoặc không có quyền truy cập ($statusCode).');
-    } else if (statusCode >= 500) {
-      throw HttpException(
-          detail != null
-              ? 'Lỗi $statusCode: $detail'
-              : 'Máy chủ Gemini đang gặp sự cố ($statusCode). Vui lòng thử lại sau.');
-    }
-    throw HttpException(
-        detail != null
-            ? 'Lỗi $statusCode: $detail'
-            : 'Yêu cầu tới Gemini thất bại với mã lỗi HTTP $statusCode.');
-  }
-
-  String _resolveErrorMessage(dynamic error) {
-    if (error is SocketException || error is http.ClientException) {
-      return 'Không thể kết nối đến Gemini. Vui lòng kiểm tra kết nối mạng.';
-    }
-    if (error is TimeoutException) {
-      return 'Yêu cầu tạo thực đơn từ Gemini đã hết thời gian chờ. Vui lòng thử lại.';
-    }
-    if (error is HttpException) {
-      return error.message;
-    }
-    if (error is FormatException) {
-      return error.message;
-    }
-    return 'Đã xảy ra lỗi khi tạo thực đơn từ Gemini. Vui lòng thử lại sau.';
-  }
-
   MealPlan _buildInitialPlan() {
     final recipes = [...RecipeRepository.instance.all];
     if (_selectedHealthGoal == 'Giảm cân') {
@@ -495,9 +333,7 @@ Bắt buộc trả về đúng định dạng JSON:
   @override
   void dispose() {
     _disposed = true;
-    if (_ownsClient) {
-      _client.close();
-    }
+    _gemini.dispose();
     super.dispose();
   }
 }
