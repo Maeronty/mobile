@@ -10,6 +10,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/models/recipe.dart';
 import '../../../core/widgets/recipe_card.dart';
 
@@ -35,9 +36,12 @@ class HomeFastRecipesSection extends StatelessWidget {
             children: [
               Icon(Icons.bolt_rounded, color: Colors.amber, size: 22),
               SizedBox(width: 6),
-              Text(
-                'Nấu nhanh gọn (Dưới 25 phút)',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  'Nấu nhanh gọn (Dưới 25 phút)',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),

@@ -7,7 +7,7 @@
 3. Mở app → **Đăng nhập / Đăng ký** (hoặc "Dùng thử không cần tài khoản"). Phiên được ghi nhớ nếu chọn "Ghi nhớ đăng nhập".
 4. **Gợi ý → Theo tủ lạnh → Gemini** (cần đăng nhập): nhập nguyên liệu hoặc chụp/chọn ảnh, kiểm tra lại tên rồi bấm **Gợi ý món từ nguyên liệu**.
 
-Danh mục công thức lấy từ `GET /catalog`; mất kết nối thì app dùng bản tiếng Việt trong `assets/spoonacular.json`. Test: `cargo test` trong `backend/`, `flutter test` ở thư mục gốc.
+Danh mục công thức (~1.800 món Việt từ Món Ngon Mỗi Ngày + 8 món Spoonacular) lấy từ `GET /catalog`; mất kết nối thì app dùng `backend/assets/vietnamese_recipes.json` và `assets/spoonacular.json` đóng gói sẵn. Test: `cargo test` trong `backend/`, `flutter test` ở thư mục gốc.
 
 <div align="center">
 

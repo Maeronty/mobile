@@ -8,14 +8,17 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 
 class RecipeIngredientsHeader extends StatelessWidget {
   final int totalCount;
   final int checkedCount;
   final int servings;
-  final VoidCallback onDecrease;
-  final VoidCallback onIncrease;
+
+  /// null khi không rõ khẩu phần gốc → ẩn bộ chỉnh khẩu phần.
+  final VoidCallback? onDecrease;
+  final VoidCallback? onIncrease;
 
   const RecipeIngredientsHeader({
     super.key,
@@ -49,35 +52,44 @@ class RecipeIngredientsHeader extends StatelessWidget {
             ),
           ],
         ),
-        // Scaler
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.remove, size: 16, color: AppColors.primaryDark),
-                onPressed: onDecrease,
-                visualDensity: VisualDensity.compact,
-              ),
-              Text(
-                '$servings phần',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: AppColors.primaryDark,
+        // Scaler (ẩn khi không rõ khẩu phần gốc)
+        if (onDecrease != null && onIncrease != null)
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(
+                    Icons.remove,
+                    size: 16,
+                    color: AppColors.primaryDark,
+                  ),
+                  onPressed: onDecrease,
+                  visualDensity: VisualDensity.compact,
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add, size: 16, color: AppColors.primaryDark),
-                onPressed: onIncrease,
-                visualDensity: VisualDensity.compact,
-              ),
-            ],
+                Text(
+                  '$servings phần',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.primaryDark,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(
+                    Icons.add,
+                    size: 16,
+                    color: AppColors.primaryDark,
+                  ),
+                  onPressed: onIncrease,
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }

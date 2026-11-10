@@ -41,14 +41,54 @@ class HomeController extends ChangeNotifier {
   static const Duration bannerInterval = Duration(seconds: 4);
 
   /// Dữ liệu banner nổi bật đầu trang.
-  static List<Map<String, String>> get heroBanners => RecipeRepository.instance.all.take(4).map((r) => {
-    'title': r.title, 'subtitle': r.description, 'image': r.imageAsset, 'tag': r.category,
-  }).toList();
+  /// Danh mục tiêu biểu để chọn banner (mỗi danh mục 1 món Việt có ảnh).
+  static const List<String> bannerCategories = [
+    'Bún, Phở & Mì',
+    'Canh',
+    'Cơm & Xôi',
+    'Món kho',
+  ];
+
+  /// 4 banner: món Việt có ảnh đầu tiên của từng danh mục tiêu biểu.
+  static List<Map<String, String>> get heroBanners {
+    final viet = RecipeRepository.instance.all
+        .where(
+          (r) =>
+              r.imageAsset.isNotEmpty &&
+              r.id >= RecipeRepository.vietnameseIdBase,
+        )
+        .toList();
+    final picks = [
+      for (final c in bannerCategories)
+        ...viet.where((r) => r.category == c).take(1),
+    ];
+    final list = picks.isNotEmpty
+        ? picks
+        : RecipeRepository.instance.all.take(4).toList();
+    return list
+        .map(
+          (r) => {
+            'title': r.title,
+            'subtitle': r.description,
+            'image': r.imageAsset,
+            'tag': r.category.toUpperCase(),
+          },
+        )
+        .toList();
+  }
+
+  /// Số món hiển thị mỗi lần ở lưới Home (danh mục có thể có hàng trăm món;
+  /// dựng hết một lúc sẽ rất giật).
+  static const int pageSize = 20;
 
   /// Danh sách chip danh mục.
-  static List<String> get categories => [allCategory, ...RecipeRepository.instance.categories];
+  static List<String> get categories => [
+    allCategory,
+    ...RecipeRepository.instance.categories,
+  ];
 
   String _selectedCategory = allCategory;
+  int _visibleCount = pageSize;
   int _currentBannerIndex = 0;
 
   String get selectedCategory => _selectedCategory;
@@ -74,6 +114,7 @@ class HomeController extends ChangeNotifier {
 
   void selectCategory(String category) {
     _selectedCategory = category;
+    _visibleCount = pageSize;
     notifyListeners();
   }
 
@@ -84,10 +125,22 @@ class HomeController extends ChangeNotifier {
     return all.where((r) => r.category == _selectedCategory).toList();
   }
 
+  /// Phần đang hiển thị của [filteredRecipes].
+  List<Recipe> get visibleRecipes =>
+      filteredRecipes.take(_visibleCount).toList();
+
+  bool get hasMore => filteredRecipes.length > _visibleCount;
+
+  /// Bấm "Xem thêm" → hiện thêm [pageSize] món.
+  void showMore() {
+    _visibleCount += pageSize;
+    notifyListeners();
+  }
+
   /// Công thức nấu nhanh (≤ [fastCookMaxMinutes] phút).
   List<Recipe> get fastRecipes {
     return RecipeRepository.instance.all
-        .where((r) => r.cookTimeMinutes <= fastCookMaxMinutes)
+        .where((r) => r.hasCookTime && r.cookTimeMinutes <= fastCookMaxMinutes)
         .toList();
   }
 }

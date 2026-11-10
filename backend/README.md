@@ -40,7 +40,16 @@ Khi chạy lần đầu, backend sẽ tự động:
 1. Tạo file SQLite database (`sqlite://food_tip.db?mode=rwc`).
 2. Kích hoạt chế độ WAL (`PRAGMA journal_mode = WAL;`) để tối ưu hiệu năng đọc/ghi đồng thời.
 3. Chạy các tệp migrations trong `migrations/` để tạo các bảng `users`, `recipes`, `recipe_nutrition`, `recipe_ingredients`, `recipe_instructions`, `user_favorites`, `pantry_items`.
-4. Nạp sẵn danh mục công thức mẫu vào database từ `assets/spoonacular.json`.
+4. Nạp sẵn danh mục công thức vào database:
+   * 8 món Spoonacular từ `assets/spoonacular.json` (chỉ khi bảng `recipes` còn trống).
+   * ~1.800 món Việt từ `assets/vietnamese_recipes.json` (id ≥ 1.000.000). DB cũ chỉ có 8 món
+     cũng được bổ sung ở lần khởi động kế tiếp (`src/db/seed_vietnamese.rs`).
+
+   **Món Việt** lấy từ dữ liệu đã cào của Món Ngon Mỗi Ngày (monngonmoingay.com) trong project
+   cũ, chuyển đổi bằng `python tools/import_monngon.py <crawled_vietnamese_recipes_3000.json>`.
+   Trang nguồn không có thời gian nấu, khẩu phần, dinh dưỡng → lưu `0` / không tạo dòng dinh
+   dưỡng, app hiển thị "—" (không bịa số). Nội dung và ảnh thuộc trang nguồn: chỉ dùng cho đồ án,
+   cần ghi nguồn.
 5. Lắng nghe tại `http://0.0.0.0:8787`.
 
 ### 3. Cấu hình biến môi trường

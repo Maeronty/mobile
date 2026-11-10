@@ -83,6 +83,8 @@ class SurpriseMeController extends ChangeNotifier {
 
       // 2. Thời gian nấu
       if (_selectedTimeFilter != null) {
+        // Món không rõ thời gian nấu không thuộc khoảng nào.
+        if (!r.hasCookTime) return false;
         if (_selectedTimeFilter == 1 && r.cookTimeMinutes > 20) return false;
         if (_selectedTimeFilter == 2 &&
             (r.cookTimeMinutes <= 20 || r.cookTimeMinutes > 40)) {

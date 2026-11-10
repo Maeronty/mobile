@@ -161,19 +161,19 @@ class SurpriseHeroCard extends StatelessWidget {
                   children: [
                     SurpriseStatItem(
                       icon: Icons.access_time_rounded,
-                      label: '${recipe.cookTimeMinutes} phút',
+                      label: recipe.cookTimeLabel,
                       sublabel: 'Thời gian',
                       color: AppColors.primary,
                     ),
                     SurpriseStatItem(
                       icon: Icons.local_fire_department_rounded,
-                      label: '${recipe.calories} kcal',
+                      label: recipe.caloriesLabel,
                       sublabel: 'Năng lượng',
                       color: Colors.deepOrange,
                     ),
                     SurpriseStatItem(
                       icon: Icons.people_outline_rounded,
-                      label: '${recipe.servings} người',
+                      label: recipe.servingsLabel,
                       sublabel: 'Khẩu phần',
                       color: Colors.blue,
                     ),

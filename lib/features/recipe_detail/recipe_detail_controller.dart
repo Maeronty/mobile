@@ -21,6 +21,10 @@
 //   5. Bấm "Bắt đầu chế độ nấu ăn" → màn hình mở CookingModeScreen.
 //
 // LƯU Ý
+//   - Món không rõ khẩu phần gốc (servings = 0, VD món Việt cào từ web) →
+//     `canScale = false`: giữ nguyên định lượng gốc, không cho bấm [−]/[+].
+//   - Nguyên liệu không có định lượng (amount = 0, VD "Muối, tiêu") → không
+//     hiện số.
 //   - State này là của riêng 1 lần mở màn hình (không singleton) → đóng màn
 //     hình là reset khẩu phần & checklist.
 // =============================================================================
@@ -32,7 +36,7 @@ import '../../core/models/recipe.dart';
 
 class RecipeDetailController extends ChangeNotifier {
   RecipeDetailController({required int recipeId})
-      : recipe = RecipeRepository.instance.findById(recipeId) {
+    : recipe = RecipeRepository.instance.findById(recipeId) {
     _servings = recipe.servings;
   }
 
@@ -42,11 +46,14 @@ class RecipeDetailController extends ChangeNotifier {
   late int _servings;
   final Set<int> _checkedIngredients = {};
 
-  /// Số khẩu phần người dùng đang chọn.
+  /// Số khẩu phần người dùng đang chọn (0 = không rõ khẩu phần gốc).
   int get servings => _servings;
 
+  /// Chỉ nhân định lượng được khi biết khẩu phần gốc.
+  bool get canScale => recipe.hasServings;
+
   /// Hệ số nhân định lượng. Chặn chia cho 0 nếu dữ liệu gốc có servings = 0.
-  double get scaleFactor => _servings / (recipe.servings == 0 ? 1 : recipe.servings);
+  double get scaleFactor => canScale ? _servings / recipe.servings : 1;
 
   /// Số nguyên liệu đã được tick "đã chuẩn bị".
   int get checkedCount => _checkedIngredients.length;
@@ -54,13 +61,14 @@ class RecipeDetailController extends ChangeNotifier {
   bool isIngredientChecked(int index) => _checkedIngredients.contains(index);
 
   void increaseServings() {
+    if (!canScale) return;
     _servings++;
     notifyListeners();
   }
 
   /// Giảm khẩu phần, không cho xuống dưới 1.
   void decreaseServings() {
-    if (_servings <= 1) return;
+    if (!canScale || _servings <= 1) return;
     _servings--;
     notifyListeners();
   }
@@ -75,10 +83,14 @@ class RecipeDetailController extends ChangeNotifier {
   /// Định lượng nguyên liệu sau khi nhân hệ số, định dạng gọn:
   /// số nguyên → "200", số lẻ → "1.5".
   String formatScaledAmount(double baseAmount) {
+    if (baseAmount <= 0) return '';
     final scaled = baseAmount * scaleFactor;
-    return scaled % 1 == 0 ? scaled.toInt().toString() : scaled.toStringAsFixed(1);
+    return scaled % 1 == 0
+        ? scaled.toInt().toString()
+        : scaled.toStringAsFixed(1);
   }
 
   /// Chỉ số dinh dưỡng (gram) sau khi nhân hệ số, làm tròn số nguyên.
-  String formatScaledGrams(double baseGrams) => (baseGrams * scaleFactor).toStringAsFixed(0);
+  String formatScaledGrams(double baseGrams) =>
+      (baseGrams * scaleFactor).toStringAsFixed(0);
 }
