@@ -1,173 +1,251 @@
 // =============================================================================
-// MÀN HÌNH: TRANG CHỦ (tab "Trang Chủ")
+// MÀN HÌNH: TRANG CHỦ (tab "Trang Chủ") — phong cách tạp chí ẩm thực
 // =============================================================================
 //
 // FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng khu vực nằm trong `widgets/`.
-// Dữ liệu banner/danh mục và logic lọc nằm trong `home_controller.dart`;
-// Dark Mode nằm trong `features/theme/theme_controller.dart`.
+// Dữ liệu + phân trang nằm trong `home_controller.dart`.
+//
+// BỐ CỤC (một CustomScrollView duy nhất → cuộn mượt, dựng lười)
+//   1. App bar nổi: logo, nút tìm kiếm, nút sáng/tối. Cuộn xuống thì ẩn, kéo
+//      lên một chút là hiện lại ngay (floating + snap).
+//   2. Lời chào "Hôm nay nấu gì?" (+ báo nhẹ nếu đang dùng dữ liệu ngoại tuyến).
+//   3. Banner món nổi bật (vuốt ngang, tự chạy).
+//   4. Hai phím tắt: Tủ lạnh / Surprise Me.
+//   5. Thanh danh mục DÍNH trên đầu khi cuộn.
+//   6. Lưới món 2 cột, tự tải trang kế khi gần cuối.
 //
 // FLOW UI
-//   1. initState → tạo HomeController, lắng nghe thay đổi, bật timer banner.
-//   2. Timer mỗi 4s → PageView trượt tới `nextBannerIndex`.
-//   3. Chạm chip danh mục → `selectCategory` → lưới "Món ăn thịnh hành" lọc lại.
-//   4. Thẻ CTA "Tủ lạnh" / "Gợi ý AI" → `onNavigateTab(index)` để
-//      MainNavigationScreen chuyển tab.
-//   5. Nút mặt trăng/mặt trời → ThemeController.toggleTheme().
+//   - Mở màn → controller.init(): banner, danh mục, trang 1 (khung chờ shimmer).
+//   - Cuộn tới khi còn < 900 px là chạm cuối → controller.loadMore().
+//   - Chọn danh mục → nếu đã cuộn quá thanh danh mục thì cuộn mượt về ngay
+//     dưới thanh, rồi lưới mới hiện lần lượt.
+//   - Kéo xuống ở đầu trang → làm mới (thử lại server nếu đang ngoại tuyến).
 // =============================================================================
-
-import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../../core/widgets/mystery_plate_icon.dart';
+import '../../core/motion/fade_slide_in.dart';
+import '../../core/motion/motion.dart';
+import '../../core/motion/shimmer.dart';
+import '../../core/theme/app_colors.dart';
 import '../surprise_me/surprise_me_screen.dart';
 import 'home_controller.dart';
-import 'widgets/home_action_card.dart';
-import 'widgets/home_banner_indicator.dart';
 import 'widgets/home_brand_title.dart';
-import 'widgets/home_category_section.dart';
-import 'widgets/home_fast_recipes_section.dart';
-import 'widgets/home_hero_carousel.dart';
-import 'widgets/home_search_shortcut.dart';
+import 'widgets/home_category_bar.dart';
+import 'widgets/home_featured_carousel.dart';
+import 'widgets/home_quick_actions.dart';
+import 'widgets/home_recipe_grid.dart';
 import 'widgets/home_theme_toggle_button.dart';
-import 'widgets/home_trending_section.dart';
 
 class HomeScreen extends StatefulWidget {
-  /// Callback để chuyển tab ở thanh điều hướng dưới (0: Home, 1: Gợi ý, 2: Túi Thần Kỳ, 3: Cá nhân).
+  /// Chuyển tab ở thanh điều hướng dưới (0: Home, 1: Gợi ý, 2: Túi Thần Kỳ, 3: Cá nhân).
   final Function(int)? onNavigateTab;
 
-  const HomeScreen({super.key, this.onNavigateTab});
+  /// Cho test truyền controller dùng nguồn dữ liệu giả.
+  final HomeController? controller;
+
+  const HomeScreen({super.key, this.onNavigateTab, this.controller});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final HomeController _controller = HomeController();
-  final PageController _bannerController = PageController();
-  Timer? _bannerTimer;
+  late final HomeController _controller = widget.controller ?? HomeController();
+  final ScrollController _scroll = ScrollController();
+  final GlobalKey _topKey = GlobalKey();
+
+  static const double _loadMoreThreshold = 900;
 
   @override
   void initState() {
     super.initState();
-    _controller.addListener(_onControllerChanged);
-    _startBannerAutoSlide();
+    _controller.addListener(_onChanged);
+    _scroll.addListener(_maybeLoadMore);
+    _controller.init().then((_) => _fillViewport());
   }
 
   @override
   void dispose() {
-    _bannerTimer?.cancel();
-    _bannerController.dispose();
-    _controller.removeListener(_onControllerChanged);
-    _controller.dispose();
+    _scroll.dispose();
+    _controller.removeListener(_onChanged);
+    if (widget.controller == null) _controller.dispose();
     super.dispose();
   }
 
-  void _onControllerChanged() => setState(() {});
+  void _onChanged() {
+    if (mounted) setState(() {});
+  }
 
-  /// Tự trượt banner: mỗi `bannerInterval` chuyển sang trang kế tiếp (quay vòng).
-  void _startBannerAutoSlide() {
-    _bannerTimer = Timer.periodic(HomeController.bannerInterval, (timer) {
-      if (_bannerController.hasClients) {
-        _bannerController.animateToPage(
-          _controller.nextBannerIndex,
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOutCubic,
-        );
+  void _maybeLoadMore() {
+    if (_scroll.hasClients && _scroll.position.extentAfter < _loadMoreThreshold) {
+      _controller.loadMore();
+    }
+  }
+
+  /// Màn hình cao (desktop/tablet) có thể chưa đủ món để cuộn → tải thêm.
+  void _fillViewport() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scroll.hasClients) return;
+      if (_scroll.position.maxScrollExtent < _loadMoreThreshold && _controller.hasMore) {
+        _controller.loadMore().then((_) => _fillViewport());
       }
     });
   }
 
+  Future<void> _selectCategory(String? category) async {
+    // Đã cuộn qua thanh danh mục → đưa lưới về ngay dưới thanh (thanh vẫn dính).
+    final topHeight = _topKey.currentContext?.size?.height;
+    if (topHeight != null && _scroll.hasClients && _scroll.offset > topHeight) {
+      final reduced = Motion.reduced(context);
+      if (reduced) {
+        _scroll.jumpTo(topHeight);
+      } else {
+        _scroll.animateTo(topHeight, duration: Motion.slow, curve: Motion.standard);
+      }
+    }
+    await _controller.selectCategory(category);
+    _fillViewport();
+  }
+
   void _openSurpriseMe() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SurpriseMeScreen()),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => const SurpriseMeScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = _controller;
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 16,
-        title: const HomeBrandTitle(),
-        actions: const [HomeThemeToggleButton(), SizedBox(width: 8)],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            HomeSearchShortcut(
-              onTap: () => widget.onNavigateTab?.call(1), // Jump to Suggest tab
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () async {
+          await c.refresh();
+          _fillViewport();
+        },
+        child: CustomScrollView(
+          controller: _scroll,
+          physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+          cacheExtent: 600,
+          slivers: [
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              titleSpacing: 16,
+              title: const HomeBrandTitle(),
+              actions: [
+                IconButton(
+                  tooltip: 'Tìm món',
+                  icon: const Icon(Icons.search_rounded),
+                  onPressed: () => widget.onNavigateTab?.call(1),
+                ),
+                const HomeThemeToggleButton(),
+                const SizedBox(width: 8),
+              ],
             ),
-
-            HomeHeroCarousel(
-              controller: _bannerController,
-              banners: HomeController.heroBanners,
-              onPageChanged: _controller.setBannerIndex,
-            ),
-
-            const SizedBox(height: 10),
-
-            HomeBannerIndicator(
-              count: HomeController.heroBanners.length,
-              currentIndex: _controller.currentBannerIndex,
-            ),
-
-            const SizedBox(height: 20),
-
-            HomeActionCard(
-              gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
-              icon: const Icon(
-                Icons.kitchen_rounded,
-                color: Colors.white,
-                size: 28,
+            SliverToBoxAdapter(
+              child: Column(
+                key: _topKey,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  FadeSlideIn(child: _Greeting(offline: c.isOffline)),
+                  const SizedBox(height: 16),
+                  AnimatedSwitcher(
+                    duration: Motion.medium,
+                    child: c.featured.isEmpty
+                        ? const Shimmer(child: HomeFeaturedSkeleton())
+                        : HomeFeaturedCarousel(key: const ValueKey('featured'), items: c.featured),
+                  ),
+                  const SizedBox(height: 20),
+                  FadeSlideIn(
+                    delay: Motion.stagger * 2,
+                    child: HomeQuickActions(
+                      onOpenPantry: () => widget.onNavigateTab?.call(2),
+                      onOpenSurprise: _openSurpriseMe,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ],
               ),
-              title: 'Tủ lạnh hôm nay còn gì?',
-              subtitle: 'Nhập nguyên liệu để Bếp Việt gợi ý món ngon tức thì',
-              onTap: () => widget.onNavigateTab?.call(2), // Jump to Kitchen Bag
             ),
-
-            const SizedBox(height: 12),
-
-            HomeActionCard(
-              gradientColors: const [Color(0xFFEA580C), Color(0xFFF97316)],
-              icon: const MysteryPlateIcon(color: Colors.white, size: 28),
-              title: 'Hôm nay ăn gì? • Surprise Me',
-              subtitle: 'Chọn thể loại hoặc để đầu bếp bí mật chọn ngẫu nhiên món ngon!',
-              onTap: _openSurpriseMe,
-            ),
-
-            const SizedBox(height: 24),
-
-            HomeCategorySection(
-              categories: HomeController.categories,
-              selectedCategory: _controller.selectedCategory,
-              onSelected: _controller.selectCategory,
-            ),
-
-            const SizedBox(height: 24),
-
-            HomeTrendingSection(
-              title: _controller.isAllCategory
-                  ? 'Món ăn thịnh hành'
-                  : 'Món: ${_controller.selectedCategory}',
-              recipes: _controller.visibleRecipes,
-              totalCount: _controller.filteredRecipes.length,
-              onShowMore: _controller.hasMore ? _controller.showMore : null,
-              onFavoriteToggled: () => setState(() {}),
-            ),
-
-            const SizedBox(height: 28),
-
-            if (_controller.fastRecipes.isNotEmpty)
-              HomeFastRecipesSection(
-                recipes: _controller.fastRecipes,
-                onFavoriteToggled: () => setState(() {}),
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: HomeCategoryBarDelegate(
+                categories: c.categories,
+                allCount: c.allCount,
+                selected: c.selectedCategory,
+                onSelected: _selectCategory,
               ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+                child: AnimatedSwitcher(
+                  duration: Motion.medium,
+                  child: Row(
+                    key: ValueKey('${c.sectionTitle}-${c.total}'),
+                    children: [
+                      Flexible(
+                        child: Text(
+                          c.sectionTitle,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      if (c.total > 0) Text('${c.total} món', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            HomeRecipeGrid(items: c.items, shouldAnimate: c.shouldAnimate, pageSize: HomeController.pageSize),
+            HomeGridFooter(
+              loading: c.isLoading,
+              hasMore: c.hasMore,
+              error: c.error,
+              total: c.total,
+              onRetry: () => c.retry().then((_) => _fillViewport()),
+            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Greeting extends StatelessWidget {
+  final bool offline;
+
+  const _Greeting({required this.offline});
+
+  @override
+  Widget build(BuildContext context) {
+    final hour = DateTime.now().hour;
+    final hello = hour < 11 ? 'Chào buổi sáng' : (hour < 14 ? 'Chào buổi trưa' : (hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'));
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$hello 👋', style: const TextStyle(color: Colors.grey, fontSize: 14)),
+          const SizedBox(height: 2),
+          const Text('Hôm nay nấu gì?', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800, height: 1.15)),
+          if (offline) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.cloud_off_rounded, size: 16, color: Colors.orange.shade700),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    'Không kết nối được máy chủ — đang dùng dữ liệu có sẵn. Kéo xuống để thử lại.',
+                    style: TextStyle(fontSize: 12, color: Colors.orange.shade800),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
