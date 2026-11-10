@@ -8,7 +8,7 @@
 //   3. Khi người dùng đổi Sáng/Tối → ThemeController.notifyListeners() →
 //      MaterialApp build lại với `themeMode` mới (light/dark theme khai báo
 //      trong core/theme/app_theme.dart).
-//   4. Màn hình gốc là MainNavigationScreen (thanh điều hướng 4 tab).
+//   4. Màn hình gốc là MainNavigationScreen (thanh điều hướng 5 tab).
 // =============================================================================
 
 import 'package:flutter/material.dart';

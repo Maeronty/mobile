@@ -18,6 +18,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../core/widgets/mystery_plate_icon.dart';
+import '../nutrition/nutrition_advisor_screen.dart';
 import '../surprise_me/surprise_me_screen.dart';
 import 'home_controller.dart';
 import 'widgets/home_action_card.dart';
@@ -85,6 +86,19 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openNutritionAdvisor() {
+    if (widget.onNavigateTab != null) {
+      widget.onNavigateTab!(3);
+      return;
+    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NutritionAdvisorScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -136,6 +150,16 @@ class _HomeScreenState extends State<HomeScreen> {
               title: 'Hôm nay ăn gì? • Surprise Me',
               subtitle: 'Chọn thể loại hoặc để đầu bếp bí mật chọn ngẫu nhiên món ngon!',
               onTap: _openSurpriseMe,
+            ),
+
+            const SizedBox(height: 12),
+
+            HomeActionCard(
+              gradientColors: const [Color(0xFF0284C7), Color(0xFF0EA5E9)],
+              icon: const Icon(Icons.psychology_rounded, color: Colors.white, size: 28),
+              title: 'Cố Vấn Dinh Dưỡng AI',
+              subtitle: 'Lập thực đơn 7 ngày cá nhân hoá theo mục tiêu sức khỏe',
+              onTap: _openNutritionAdvisor,
             ),
 
             const SizedBox(height: 24),

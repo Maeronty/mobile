@@ -15,6 +15,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../core/models/recipe.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/difficulty_stars.dart';
 import '../cooking_mode/cooking_mode_screen.dart';
@@ -30,10 +31,12 @@ import 'widgets/recipe_step_card.dart';
 
 class RecipeDetailScreen extends StatefulWidget {
   final int recipeId;
+  final Recipe? recipe;
 
   const RecipeDetailScreen({
     super.key,
     required this.recipeId,
+    this.recipe,
   });
 
   @override
@@ -46,7 +49,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = RecipeDetailController(recipeId: widget.recipeId);
+    _controller = RecipeDetailController(
+      recipeId: widget.recipeId,
+      initialRecipe: widget.recipe,
+    );
     _controller.addListener(_onControllerChanged);
   }
 

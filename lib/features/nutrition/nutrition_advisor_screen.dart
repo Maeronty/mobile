@@ -11,8 +11,6 @@
 //   3. Bấm "Tạo lại thực đơn thông minh" → `_generateNewPlan` → chờ controller
 //      tạo xong → SnackBar báo thành công.
 //   4. Chọn ngày → xem tổng calo, tóm tắt dinh dưỡng và danh sách bữa ăn.
-//
-// LƯU Ý: Màn hình này hiện chưa được gắn vào thanh điều hướng.
 // =============================================================================
 
 import 'package:flutter/material.dart';
@@ -26,25 +24,32 @@ import 'widgets/nutrition_meal_card.dart';
 import 'widgets/nutrition_option_selector.dart';
 
 class NutritionAdvisorScreen extends StatefulWidget {
-  const NutritionAdvisorScreen({super.key});
+  final NutritionController? controller;
+
+  const NutritionAdvisorScreen({super.key, this.controller});
 
   @override
   State<NutritionAdvisorScreen> createState() => _NutritionAdvisorScreenState();
 }
 
 class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
-  final NutritionController _controller = NutritionController();
+  late final NutritionController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? NutritionController();
     _controller.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
-    _controller.dispose();
+    if (_ownsController) {
+      _controller.dispose();
+    }
     super.dispose();
   }
 
@@ -52,7 +57,19 @@ class _NutritionAdvisorScreenState extends State<NutritionAdvisorScreen> {
 
   Future<void> _generateNewPlan() async {
     final done = await _controller.generatePlan();
-    if (!done || !mounted) return;
+    if (!mounted) return;
+
+    if (!done) {
+      final msg = _controller.errorMessage ??
+          'Không thể tạo thực đơn từ Gemini. Vui lòng thử lại.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      return;
+    }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

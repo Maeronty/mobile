@@ -5,9 +5,20 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/data/recipe_repository.dart';
+import '../recipe_detail/recipe_detail_screen.dart';
+
 class AiSuggestScreen extends StatefulWidget {
-  const AiSuggestScreen({super.key, required this.ingredients});
+  const AiSuggestScreen({
+    super.key,
+    required this.ingredients,
+    this.initialRecipes,
+    this.client,
+  });
+
   final List<String> ingredients;
+  final List<Map<String, dynamic>>? initialRecipes;
+  final http.Client? client;
 
   @override
   State<AiSuggestScreen> createState() => _AiSuggestScreenState();
@@ -19,7 +30,8 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
     defaultValue: 'http://127.0.0.1:8787',
   );
   final picker = ImagePicker();
-  final client = http.Client();
+  late final http.Client client;
+  late final bool _ownsClient;
   late final input = TextEditingController(text: widget.ingredients.join(', '));
   List<Map<String, dynamic>> recipes = [];
   String? message;
@@ -28,6 +40,11 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
   @override
   void initState() {
     super.initState();
+    _ownsClient = widget.client == null;
+    client = widget.client ?? http.Client();
+    if (widget.initialRecipes != null) {
+      recipes = List<Map<String, dynamic>>.from(widget.initialRecipes!);
+    }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       run(() async {
         final lost = await picker.retrieveLostData();
@@ -39,7 +56,9 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
   @override
   void dispose() {
     input.dispose();
-    client.close();
+    if (_ownsClient) {
+      client.close();
+    }
     super.dispose();
   }
 
@@ -147,6 +166,39 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
     }
   });
 
+  void _openRecipeDetail(Map<String, dynamic> suggestion) {
+    final rawId = suggestion['id'];
+    final int id = rawId is int ? rawId : int.tryParse(rawId?.toString() ?? '') ?? 0;
+    final title = suggestion['title'] as String? ?? 'Món gợi ý';
+    final reason = suggestion['reason'] as String?;
+    final used = (suggestion['used'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];
+    final missing = (suggestion['missing'] as List?)?.map((e) => e.toString()).toList() ?? <String>[];
+
+    var recipe = RecipeRepository.instance.findByIdOrNull(id);
+    if (recipe == null) {
+      recipe = RecipeRepository.instance.createCompatibleRecipe(
+        id: id,
+        title: title,
+        description: reason != null && reason.isNotEmpty
+            ? reason
+            : 'Gợi ý từ Gemini dựa trên nguyên liệu của bạn.',
+        used: used,
+        missing: missing,
+      );
+      RecipeRepository.instance.addRecipe(recipe);
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RecipeDetailScreen(
+          recipeId: recipe!.id,
+          recipe: recipe,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final camera =
@@ -205,21 +257,72 @@ class _AiSuggestScreenState extends State<AiSuggestScreen> {
             ),
           for (final recipe in recipes)
             Card(
-              child: ExpansionTile(
-                title: Text(recipe['title']),
-                subtitle: Text(recipe['reason']),
-                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                expandedCrossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  for (final entry in {
-                    'used': 'Đã có',
-                    'missing': 'Cần thêm',
-                  }.entries)
-                    Text(
-                      '${entry.value}: ${(recipe[entry.key] as List).isEmpty ? "Không có" : (recipe[entry.key] as List).join(", ")}',
-                    ),
-                  Text('Nguồn: Spoonacular · #${recipe['id']}'),
-                ],
+              clipBehavior: Clip.antiAlias,
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              child: InkWell(
+                onTap: () => _openRecipeDetail(recipe),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  recipe['title'] as String? ?? '',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                if (recipe['reason'] != null && (recipe['reason'] as String).isNotEmpty) ...[
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    recipe['reason'] as String,
+                                    style: TextStyle(
+                                      color: Colors.grey.shade700,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      for (final entry in {
+                        'used': 'Đã có',
+                        'missing': 'Cần thêm',
+                      }.entries)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '${entry.value}: ${(recipe[entry.key] as List?)?.isEmpty ?? true ? "Không có" : (recipe[entry.key] as List).join(", ")}',
+                          ),
+                        ),
+                      Text(
+                        'Nguồn: Spoonacular · #${recipe['id']}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: () => _openRecipeDetail(recipe),
+                          icon: const Icon(Icons.restaurant_menu),
+                          label: const Text('Xem chi tiết & Nấu ăn'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
         ],

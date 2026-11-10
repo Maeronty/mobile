@@ -31,8 +31,8 @@ import '../../core/data/recipe_repository.dart';
 import '../../core/models/recipe.dart';
 
 class RecipeDetailController extends ChangeNotifier {
-  RecipeDetailController({required int recipeId})
-      : recipe = RecipeRepository.instance.findById(recipeId) {
+  RecipeDetailController({required int recipeId, Recipe? initialRecipe})
+      : recipe = initialRecipe ?? RecipeRepository.instance.findById(recipeId) {
     _servings = recipe.servings;
   }
 

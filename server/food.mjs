@@ -51,7 +51,7 @@ export async function withGeminiKey(keys, call, blocked = cooldown) {
 }
 
 export async function gemini(prompt, schema, image) {
-  const model = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
   const parts = [{ text: prompt }];
   if (image) parts.push({ inline_data: image });
   const keys = (process.env.GEMINI_API_KEYS || key('GEMINI_API_KEY')).split(',').map(k => k.trim()).filter(Boolean);
