@@ -9,6 +9,8 @@ pub struct AppState {
     pub config: Arc<Config>,
     /// Gemini + Spoonacular; cấu hình đọc từ biến môi trường.
     pub ai: Arc<AiService>,
+    /// HTTP client dùng chung cho proxy ảnh (`/api/image`).
+    pub http: reqwest::Client,
 }
 
 impl AppState {
@@ -22,6 +24,11 @@ impl AppState {
             pool,
             config: Arc::new(config),
             ai: Arc::new(AiService::new(ai)),
+            http: reqwest::Client::builder()
+                .timeout(std::time::Duration::from_secs(20))
+                .user_agent("BepViet/1.0 (image proxy)")
+                .build()
+                .expect("Không tạo được HTTP client"),
         }
     }
 }

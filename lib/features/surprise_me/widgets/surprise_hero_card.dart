@@ -12,6 +12,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/api_client.dart';
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/difficulty_stars.dart';
@@ -61,7 +62,7 @@ class SurpriseHeroCard extends StatelessWidget {
                 height: 220,
                 width: double.infinity,
                 child: Image.network(
-                  recipe.imageAsset,
+                  ApiClient.imageUrl(recipe.imageAsset),
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     color: AppColors.primaryLight,

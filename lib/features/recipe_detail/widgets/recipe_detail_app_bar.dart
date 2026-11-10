@@ -12,6 +12,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/api_client.dart';
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -76,7 +77,7 @@ class RecipeDetailAppBar extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.network(
-              recipe.imageAsset,
+              ApiClient.imageUrl(recipe.imageAsset),
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(
                 color: Colors.grey.shade300,
