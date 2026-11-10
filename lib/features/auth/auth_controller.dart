@@ -78,8 +78,9 @@ class AuthController extends ChangeNotifier {
   static String? validateEmail(String? value) {
     final v = value?.trim() ?? '';
     if (v.isEmpty) return 'Vui lòng nhập email';
-    if (v.length < 5 || !v.contains('@') || !v.contains('.'))
+    if (v.length < 5 || !v.contains('@') || !v.contains('.')) {
       return 'Email không hợp lệ';
+    }
     return null;
   }
 
@@ -92,8 +93,9 @@ class AuthController extends ChangeNotifier {
     if (!RegExp('[a-z]').hasMatch(v)) return 'Cần ít nhất 1 chữ thường';
     if (!RegExp('[A-Z]').hasMatch(v)) return 'Cần ít nhất 1 chữ hoa';
     if (!RegExp(r'\d').hasMatch(v)) return 'Cần ít nhất 1 chữ số';
-    if (!RegExp(r'[^\da-zA-Z]').hasMatch(v))
+    if (!RegExp(r'[^\da-zA-Z]').hasMatch(v)) {
       return 'Cần ít nhất 1 ký tự đặc biệt (!@#...)';
+    }
     return null;
   }
 
