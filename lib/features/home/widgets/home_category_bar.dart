@@ -7,11 +7,13 @@
 //     dính lại ở đầu màn hình, luôn đổi danh mục được.
 //   - Khi đã dính (nội dung trượt bên dưới) → hiện bóng mờ nhẹ để tách lớp.
 //   - Chip đang chọn: nền xanh, chữ trắng; đổi chọn bằng AnimatedContainer.
-//     Chip được chọn tự cuộn vào giữa tầm nhìn (Scrollable.ensureVisible).
+//     Chip được chọn tự cuộn NGANG vào giữa thanh. Không dùng
+//     Scrollable.ensureVisible vì hàm đó cuộn cả danh sách dọc của Home.
 //   - Mỗi chip kèm số món của danh mục.
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 
 import '../../../core/models/recipe_summary.dart';
 import '../../../core/motion/motion.dart';
@@ -72,6 +74,13 @@ class _CategoryChips extends StatefulWidget {
 
 class _CategoryChipsState extends State<_CategoryChips> {
   final Map<String?, GlobalKey> _keys = {};
+  final ScrollController _scroll = ScrollController();
+
+  @override
+  void dispose() {
+    _scroll.dispose();
+    super.dispose();
+  }
 
   GlobalKey _keyFor(String? name) => _keys.putIfAbsent(name, GlobalKey.new);
 
@@ -80,10 +89,14 @@ class _CategoryChipsState extends State<_CategoryChips> {
     super.didUpdateWidget(old);
     if (old.selected != widget.selected) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final ctx = _keyFor(widget.selected).currentContext;
-        if (ctx != null) {
-          Scrollable.ensureVisible(ctx, alignment: 0.5, duration: Motion.medium, curve: Motion.enter);
-        }
+        final box = _keyFor(widget.selected).currentContext?.findRenderObject();
+        if (box == null || !_scroll.hasClients) return;
+        final viewport = RenderAbstractViewport.of(box);
+        final target = viewport
+            .getOffsetToReveal(box, 0.5)
+            .offset
+            .clamp(_scroll.position.minScrollExtent, _scroll.position.maxScrollExtent);
+        _scroll.animateTo(target, duration: Motion.medium, curve: Motion.enter);
       });
     }
   }
@@ -95,6 +108,7 @@ class _CategoryChipsState extends State<_CategoryChips> {
       for (final c in widget.categories) (c.name, c.name, c.count),
     ];
     return ListView.separated(
+      controller: _scroll,
       scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       itemCount: entries.length,

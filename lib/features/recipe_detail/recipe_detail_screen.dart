@@ -167,7 +167,7 @@ class _Body extends StatelessWidget {
           section(Column(
             children: [
               for (var i = 0; i < recipe.ingredients.length; i++) ...[
-                if (i > 0) const Divider(height: 1),
+                if (i > 0) Divider(height: 1, color: dark ? AppColors.dividerDark : AppColors.dividerLight),
                 RecipeIngredientTile(
                   item: recipe.ingredients[i],
                   amountText: controller.formatScaledAmount(recipe.ingredients[i].amount),

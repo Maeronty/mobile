@@ -72,9 +72,11 @@ class HomeGridFooter extends StatelessWidget {
   final bool hasMore;
   final String? error;
   final int total;
+  final bool fillViewport;
   final VoidCallback onRetry;
 
   const HomeGridFooter({
+    this.fillViewport = false,
     super.key,
     required this.loading,
     required this.hasMore,
@@ -114,7 +116,7 @@ class HomeGridFooter extends StatelessWidget {
                   physics: const NeverScrollableScrollPhysics(),
                   padding: EdgeInsets.zero,
                   gridDelegate: delegate,
-                  itemCount: delegate.crossAxisCount * 2,
+                  itemCount: delegate.crossAxisCount * (fillViewport ? 4 : 2),
                   itemBuilder: (_, __) => const RecipeTileSkeleton(),
                 ),
               ),

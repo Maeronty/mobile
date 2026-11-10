@@ -95,7 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _selectCategory(String? category) async {
     // Đã cuộn qua thanh danh mục → đưa lưới về ngay dưới thanh (thanh vẫn dính).
-    final topHeight = _topKey.currentContext?.size?.height;
+    // Vị trí đó = app bar (cuộn theo nội dung) + phần lời chào/banner/phím tắt.
+    final top = _topKey.currentContext?.size?.height;
+    final topHeight = top == null ? null : top + kToolbarHeight;
     if (topHeight != null && _scroll.hasClients && _scroll.offset > topHeight) {
       final reduced = Motion.reduced(context);
       if (reduced) {
@@ -204,6 +206,9 @@ class _HomeScreenState extends State<HomeScreen> {
               hasMore: c.hasMore,
               error: c.error,
               total: c.total,
+              // Danh sách đang trống (vừa đổi danh mục) → khung chờ cao bằng
+              // một màn hình để vị trí cuộn không bị kéo ngược lên.
+              fillViewport: c.items.isEmpty,
               onRetry: () => c.retry().then((_) => _fillViewport()),
             ),
           ],
