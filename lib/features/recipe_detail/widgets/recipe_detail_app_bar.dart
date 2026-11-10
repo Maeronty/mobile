@@ -75,7 +75,7 @@ class RecipeDetailAppBar extends StatelessWidget {
         background: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
+            Image.network(
               recipe.imageAsset,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(

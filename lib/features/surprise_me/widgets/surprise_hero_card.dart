@@ -60,7 +60,7 @@ class SurpriseHeroCard extends StatelessWidget {
               SizedBox(
                 height: 220,
                 width: double.infinity,
-                child: Image.asset(
+                child: Image.network(
                   recipe.imageAsset,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(

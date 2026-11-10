@@ -41,42 +41,12 @@ class HomeController extends ChangeNotifier {
   static const Duration bannerInterval = Duration(seconds: 4);
 
   /// Dữ liệu banner nổi bật đầu trang.
-  static const List<Map<String, String>> heroBanners = [
-    {
-      'title': 'Phở Bò Hà Nội Thượng Hạng',
-      'subtitle': 'Hương vị truyền thống ngọt thanh từ xương hầm',
-      'image': 'assets/images/pho.png',
-      'tag': 'ĐẶC SẢN VIỆT',
-    },
-    {
-      'title': 'Bánh Mì Thịt Nướng Giòn Rụm',
-      'subtitle': 'Ẩm thực đường phố trứ danh đậm đà khó quên',
-      'image': 'assets/images/banh_mi.png',
-      'tag': 'ĐƯỜNG PHỐ',
-    },
-    {
-      'title': 'Bún Bò Xứ Huế Cay Nồng',
-      'subtitle': 'Đượm vị mắm ruốc cổ truyền và sả cây thơm ngát',
-      'image': 'assets/images/bun_bo_hue.png',
-      'tag': 'HƯƠNG VỊ CỐ ĐÔ',
-    },
-    {
-      'title': 'Cá Hồi Áp Chảo Măng Tây',
-      'subtitle': 'Giàu Omega-3 thanh lọc cơ thể chuẩn vị Âu',
-      'image': 'assets/images/salmon.png',
-      'tag': 'HEALTHY & KETO',
-    },
-  ];
+  static List<Map<String, String>> get heroBanners => RecipeRepository.instance.all.take(4).map((r) => {
+    'title': r.title, 'subtitle': r.description, 'image': r.imageAsset, 'tag': r.category,
+  }).toList();
 
   /// Danh sách chip danh mục.
-  static const List<String> categories = [
-    allCategory,
-    'Món Việt',
-    'Healthy',
-    'Món Âu',
-    'Ăn vặt',
-    'Tráng miệng',
-  ];
+  static List<String> get categories => [allCategory, ...RecipeRepository.instance.categories];
 
   String _selectedCategory = allCategory;
   int _currentBannerIndex = 0;

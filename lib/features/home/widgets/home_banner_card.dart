@@ -27,7 +27,7 @@ class HomeBannerCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
+            Image.network(
               banner['image']!,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) => Container(

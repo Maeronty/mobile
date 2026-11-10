@@ -7,7 +7,7 @@
 //   là đầu vào cho thuật toán gợi ý món (xem features/suggest/suggest_controller.dart).
 //
 // FLOW
-//   1. Khởi tạo với vài nguyên liệu mẫu (Thịt bò, Bánh phở...).
+//   1. Khởi tạo tủ trống. Người dùng chọn nguyên liệu Spoonacular hoặc nhập tay.
 //   2. Thêm: người dùng gõ tên → bấm "Thêm"/Enter → `addIngredient(text)`:
 //        a. Cắt khoảng trắng đầu/cuối (`trim`).
 //        b. Bỏ qua nếu rỗng hoặc đã tồn tại (tránh trùng lặp).
@@ -30,13 +30,7 @@ class PantryController extends ChangeNotifier {
 
   PantryController._();
 
-  final List<String> _ingredients = [
-    'Thịt bò',
-    'Bánh phở',
-    'Hành hoa & ngò gai',
-    'Tỏi',
-    'Gừng',
-  ];
+  final List<String> _ingredients = [];
 
   /// Danh sách nguyên liệu hiện có (chỉ đọc).
   List<String> get ingredients => List.unmodifiable(_ingredients);

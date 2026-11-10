@@ -40,7 +40,7 @@ class NutritionMealCard extends StatelessWidget {
             child: SizedBox(
               width: 80,
               height: 80,
-              child: Image.asset(
+              child: Image.network(
                 meal.imageAsset,
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),

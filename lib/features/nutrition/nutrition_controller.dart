@@ -20,7 +20,7 @@
 //   4. Chạm chip ngày → `selectDay(index)` → `activeDayPlan` đổi theo.
 //
 // NGUỒN DỮ LIỆU
-//   Thực đơn hiện lấy từ `MockData.generateSampleMealPlan` (dữ liệu mẫu).
+//   Thực đơn lấy từ danh mục Spoonacular trong RecipeRepository.
 //   Khi có API thật chỉ cần thay `_buildPlan()`.
 //
 // LƯU Ý
@@ -29,7 +29,7 @@
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/data/mock_data.dart';
+import '../../core/data/recipe_repository.dart';
 import '../../core/models/meal_plan.dart';
 
 /// Một lựa chọn hiển thị dạng chip (đối tượng hoặc mục tiêu).
@@ -117,10 +117,26 @@ class NutritionController extends ChangeNotifier {
   }
 
   MealPlan _buildPlan() {
-    return MockData.generateSampleMealPlan(
-      targetGroup: _selectedTargetGroup,
-      healthGoal: _selectedHealthGoal,
-    );
+    final recipes = [...RecipeRepository.instance.all];
+    if (_selectedHealthGoal == 'Giảm cân') {
+      recipes.sort((a, b) => a.calories.compareTo(b.calories));
+    } else if (_selectedHealthGoal == 'Tăng cơ') {
+      recipes.sort((a, b) => b.nutrition.proteinGrams.compareTo(a.nutrition.proteinGrams));
+    }
+    const weekdays = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ nhật'];
+    final days = List.generate(7, (day) {
+      final meals = List.generate(3, (index) {
+        final r = recipes[(day * 3 + index) % recipes.length];
+        return MealItem(mealType: ['Bữa sáng', 'Bữa trưa', 'Bữa tối'][index], dishName: r.title,
+            imageAsset: r.imageAsset, calories: r.calories, proteinGrams: r.nutrition.proteinGrams,
+            carbsGrams: r.nutrition.carbsGrams, fatGrams: r.nutrition.fatGrams, tip: r.description);
+      });
+      return DailyPlan(dayNumber: day + 1, dayName: weekdays[day], meals: meals,
+          totalCalories: meals.fold<int>(0, (sum, m) => sum + m.calories),
+          nutritionSummary: 'Dinh dưỡng ước tính cho một khẩu phần mỗi món.');
+    });
+    return MealPlan(targetGroup: _selectedTargetGroup, healthGoal: _selectedHealthGoal,
+        totalDays: days.length, dailyPlans: days, advisorAdvice: 'Thực đơn tham khảo từ Spoonacular.');
   }
 
   @override

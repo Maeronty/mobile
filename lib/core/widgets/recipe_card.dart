@@ -76,7 +76,7 @@ class RecipeCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: Image.asset(
+              child: Image.network(
                 recipe.imageAsset,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
@@ -254,7 +254,7 @@ class RecipeCard extends StatelessWidget {
                       const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
                       const SizedBox(width: 2),
                       Text(
-                        recipe.averageRating.toStringAsFixed(1),
+                        recipe.totalRatings == 0 ? '—' : recipe.averageRating.toStringAsFixed(1),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -281,7 +281,7 @@ class RecipeCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(
+              Image.network(
                 recipe.imageAsset,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(

@@ -15,8 +15,10 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/data/recipe_repository.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await RecipeRepository.instance.load();
   runApp(const TomatoFoodTipApp());
 }
