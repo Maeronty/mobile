@@ -1,0 +1,13 @@
+# Bí mật và dữ liệu local: KHÔNG commit
+.env
+*.db
+*.db-shm
+*.db-wal
+/data/
+
+# Rust build
+/target/
+
+# Còn sót từ backend Python cũ (nếu chuyển qua lại giữa các nhánh)
+.venv/
+__pycache__/
