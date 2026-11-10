@@ -11,6 +11,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_colors.dart';
 
 class HomeBrandTitle extends StatelessWidget {
@@ -28,31 +29,42 @@ class HomeBrandTitle extends StatelessWidget {
             color: AppColors.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(10),
           ),
-          child: const Icon(Icons.eco_rounded, color: AppColors.primary, size: 22),
+          child: const Icon(
+            Icons.eco_rounded,
+            color: AppColors.primary,
+            size: 22,
+          ),
         ),
         const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Bếp Việt',
-              style: TextStyle(
-                fontSize: 19,
-                fontWeight: FontWeight.w900,
-                color: AppColors.primary,
-                letterSpacing: 0.5,
+        Flexible(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Bếp Việt',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.primary,
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            Text(
-              'Food Tip & Smart Cooking',
-              style: TextStyle(
-                fontSize: 10,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
+              Text(
+                'Food Tip & Smart Cooking',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );

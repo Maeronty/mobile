@@ -10,6 +10,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/api_client.dart';
 import '../../../core/models/meal_plan.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -40,8 +41,8 @@ class NutritionMealCard extends StatelessWidget {
             child: SizedBox(
               width: 80,
               height: 80,
-              child: Image.asset(
-                meal.imageAsset,
+              child: Image.network(
+                ApiClient.imageUrl(meal.imageAsset),
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade200),
               ),

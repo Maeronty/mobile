@@ -17,6 +17,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../core/data/recipe_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../favorites/favorites_controller.dart';
 import '../suggest/suggest_screen.dart';
@@ -39,10 +40,17 @@ class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    // Danh mục món tải ngầm sau khi mở app → tải xong thì dựng lại tab Yêu thích.
+    RecipeRepository.instance.addListener(_onRecipesLoaded);
+  }
+
+  void _onRecipesLoaded() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
+    RecipeRepository.instance.removeListener(_onRecipesLoaded);
     _tabController.dispose();
     _pantryInputController.dispose();
     super.dispose();

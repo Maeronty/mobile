@@ -12,7 +12,7 @@
 //   1. Màn hình mở → `SuggestController(initialIngredients: ...)`:
 //        - Có truyền nguyên liệu (từ Túi Thần Kỳ) → dùng danh sách đó.
 //        - Không truyền → lấy nguyên liệu trong tủ lạnh (PantryController).
-//        - Tủ lạnh cũng trống → dùng bộ mặc định [Thịt bò, Bánh phở, Tỏi].
+//        - Tủ lạnh trống → hiển thị toàn bộ công thức.
 //   2. Người dùng đổi chế độ / thêm-xoá nguyên liệu / đổi kiểu sắp xếp
 //      → controller cập nhật state → `notifyListeners()` → UI build lại.
 //   3. UI gọi `results(query)` để lấy danh sách món cần hiển thị:
@@ -65,23 +65,7 @@ enum SuggestSortMode {
 
 class SuggestController extends ChangeNotifier {
   /// Gợi ý nhanh hiển thị dạng chip để thêm nguyên liệu bằng 1 chạm.
-  static const List<String> quickSuggestions = [
-    'Thịt bò',
-    'Ức gà',
-    'Tôm tươi',
-    'Cá hồi',
-    'Trứng gà',
-    'Cà chua',
-    'Hành tây',
-    'Bánh phở',
-    'Mì Ý',
-    'Xà lách',
-    'Măng tây',
-    'Bơ lạt',
-  ];
-
-  /// Bộ nguyên liệu mặc định khi tủ lạnh trống.
-  static const List<String> _fallbackIngredients = ['Thịt bò', 'Bánh phở', 'Tỏi'];
+  static List<String> get quickSuggestions => RecipeRepository.instance.ingredients.take(12).toList();
 
   SuggestController({List<String>? initialIngredients}) {
     // Bước 1 của flow: chọn nguồn nguyên liệu ban đầu.
@@ -90,7 +74,7 @@ class SuggestController extends ChangeNotifier {
       _searchMode = SuggestSearchMode.byIngredients;
     } else {
       final pantry = PantryController.instance.ingredients;
-      _selectedIngredients.addAll(pantry.isNotEmpty ? pantry : _fallbackIngredients);
+      _selectedIngredients.addAll(pantry);
     }
   }
 
@@ -227,9 +211,13 @@ class SuggestController extends ChangeNotifier {
       case SuggestSortMode.rating:
         list.sort((a, b) => b.averageRating.compareTo(a.averageRating));
       case SuggestSortMode.time:
-        list.sort((a, b) => a.cookTimeMinutes.compareTo(b.cookTimeMinutes));
+        // Món không rõ thời gian (0) xếp cuối.
+        list.sort((a, b) => (a.hasCookTime ? a.cookTimeMinutes : 1 << 30)
+            .compareTo(b.hasCookTime ? b.cookTimeMinutes : 1 << 30));
       case SuggestSortMode.calories:
-        list.sort((a, b) => a.calories.compareTo(b.calories));
+        // Món chưa có dữ liệu calo (0) xếp cuối.
+        list.sort((a, b) => (a.hasNutrition ? a.calories : 1 << 30)
+            .compareTo(b.hasNutrition ? b.calories : 1 << 30));
       case SuggestSortMode.match:
         // Ở chế độ tên món không có điểm khớp → giữ thứ tự gốc.
         if (isIngredientMode) {
