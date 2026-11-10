@@ -28,6 +28,14 @@ pub enum AppError {
 
     #[error("Lỗi hệ thống nội bộ: {0}")]
     Internal(String),
+
+    /// Dịch vụ bên ngoài (Gemini, Spoonacular) chưa cấu hình hoặc đang lỗi → 503.
+    #[error("Dịch vụ tạm thời không khả dụng: {0}")]
+    ServiceUnavailable(String),
+
+    /// Hết hạn mức gọi dịch vụ bên ngoài → 429.
+    #[error("Vượt giới hạn lượt gọi: {0}")]
+    TooManyRequests(String),
 }
 
 impl IntoResponse for AppError {
@@ -45,6 +53,8 @@ impl IntoResponse for AppError {
                     format!("Lỗi cơ sở dữ liệu nội bộ: {}", err),
                 )
             }
+            AppError::ServiceUnavailable(msg) => (StatusCode::SERVICE_UNAVAILABLE, msg),
+            AppError::TooManyRequests(msg) => (StatusCode::TOO_MANY_REQUESTS, msg),
             AppError::Internal(msg) => {
                 tracing::error!("Internal error: {}", msg);
                 (StatusCode::INTERNAL_SERVER_ERROR, msg)

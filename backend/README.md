@@ -43,33 +43,34 @@ Khi chạy lần đầu, backend sẽ tự động:
 4. Nạp sẵn danh mục công thức mẫu vào database từ `assets/spoonacular.json`.
 5. Lắng nghe tại `http://0.0.0.0:8787`.
 
-### 3. Cấu hình biến môi trường (Tùy chọn)
-Tạo file `.env` hoặc truyền biến môi trường:
+### 3. Cấu hình biến môi trường
+Sao chép `.env.example` thành `.env` rồi điền giá trị (`.env` đã nằm trong `.gitignore`).
+Các biến chính:
 ```env
 PORT=8787
 DATABASE_URL=sqlite://food_tip.db?mode=rwc
-JWT_SECRET=GreenFoodSuperSecretKeyForJwtAuthentication2026!
-JWT_EXPIRATION_HOURS=72
+JWT_SECRET=<chuỗi ngẫu nhiên dài>
+JWT_EXPIRATION_HOURS=2
+# AI (không bắt buộc; thiếu thì /api/Ai/* trả 503)
+GEMINI_API_KEYS=key1,key2
+GEMINI_MODEL=gemini-3.5-flash
+SPOONACULAR_API_KEY=...
 ```
 
 ---
 
 ## 📱 Kết nối với Flutter Mobile Client
 
-Trong ứng dụng Flutter (`c:\Users\John Windows\Documents\Code\Dart\mobile`):
+Trong ứng dụng Flutter (thư mục gốc của repo):
 * **Chạy trên Windows / macOS / Web / Thiết bị iOS thật:**
   Backend trỏ về: `http://127.0.0.1:8787`
 * **Chạy trên Android Emulator:**
   Backend trỏ về: `http://10.0.2.2:8787` (địa chỉ máy host trong mạng giả lập Android).
 
-Ứng dụng Flutter đã có sẵn cấu hình tham số:
-```dart
-// lib/core/data/recipe_repository.dart
-static const apiBase = String.fromEnvironment('FOOD_API_URL', defaultValue: 'http://127.0.0.1:8787');
-```
-Khi chạy Flutter với emulator:
+App tự chọn địa chỉ trên (xem `lib/core/data/api_client.dart`). Muốn trỏ tới máy khác
+(VD: điện thoại thật trong cùng mạng LAN):
 ```bash
-flutter run --dart-define=FOOD_API_URL=http://10.0.2.2:8787
+flutter run --dart-define=FOOD_API_URL=http://<ip-may-tinh>:8787
 ```
 
 ---
@@ -118,6 +119,17 @@ flutter run --dart-define=FOOD_API_URL=http://10.0.2.2:8787
 | `GET` | `/api/pantry/suggest` | **Bearer JWT** | Tự động lấy nguyên liệu trong tủ của user và gợi ý món nấu được. |
 
 *(Hỗ trợ cả alias `/api/kitchen-bag` và `/api/kitchenbag`)*.
+
+### 5. Gợi ý bằng AI (Gemini + Spoonacular)
+| Phương thức | Đường dẫn API | Xác thực | Mô tả |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/Ai/recognize` | **Bearer JWT** | Gửi `{"mime": "image/jpeg", "data": "<base64>"}` (ảnh ≤ 3 MB), Gemini trả `["Cà chua", ...]`. |
+| `POST` | `/api/Ai/suggest` | **Bearer JWT** | Gửi `{"ingredients": [...]}`: Gemini dịch → Spoonacular tìm món → Gemini xếp hạng và dịch; trả `[{id, title, reason, used, missing}]`. |
+
+* Logic nằm trong `src/services/ai_service.rs` (chuyển từ server Node `server/food.mjs` trước đây).
+* Nhiều key Gemini (`GEMINI_API_KEYS`): key bị 429 được tạm bỏ qua theo `Retry-After` (mặc định 60 giây) và chuyển sang key kế tiếp.
+* Gói miễn phí của Gemini chỉ khoảng 20 request/ngày: mỗi lần gợi ý món tốn 2 request, nhận diện ảnh tốn 1.
+* Kết quả chỉ giữ món có id trong kết quả Spoonacular, nên AI không bịa được món.
 
 ---
 

@@ -12,6 +12,7 @@ pub use error::AppError;
 pub use state::AppState;
 
 use axum::{
+    extract::DefaultBodyLimit,
     routing::{get, post, put},
     Router,
 };
@@ -115,6 +116,13 @@ pub fn create_app(state: AppState) -> Router {
         .route("/api/recipes/:id", get(handlers::recipe::get_recipe_by_id))
         .route("/suggest", post(handlers::recipe::suggest))
         .route("/api/suggest", post(handlers::recipe::suggest))
+        // AI routes (Gemini + Spoonacular, cần đăng nhập). Ảnh base64 ≤ 3 MB gốc
+        // ≈ 4 MB JSON, vượt giới hạn 2 MB mặc định của axum nên nới riêng route này.
+        .route(
+            "/api/Ai/recognize",
+            post(handlers::ai::recognize).layer(DefaultBodyLimit::max(5 * 1024 * 1024)),
+        )
+        .route("/api/Ai/suggest", post(handlers::ai::suggest))
         // Pantry & Kitchen Bag routes (Milestone M5)
         .route(
             "/api/pantry",

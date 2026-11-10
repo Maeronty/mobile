@@ -1,3 +1,4 @@
+pub mod ai_service;
 pub mod auth_service;
 pub mod favorite_service;
 pub mod pantry_service;
