@@ -1,5 +1,14 @@
 # 🍲 Bếp Việt - Food Tip & Smart Cooking System
 
+## Chạy app với backend Rust (đăng nhập + gợi ý AI)
+
+1. **Backend**: cài Rust (rustup); trên Windows cần thêm Visual Studio Build Tools (C++). Trong `backend/`, sao chép `.env.example` thành `.env`, điền `JWT_SECRET`, `GEMINI_API_KEYS`, `SPOONACULAR_API_KEY`, rồi chạy `cargo run` (lắng nghe `http://0.0.0.0:8787`). Chi tiết API: `backend/README.md`.
+2. **App**: `flutter pub get` rồi `flutter run`. Android emulator tự gọi `10.0.2.2:8787`; điện thoại thật dùng `--dart-define=FOOD_API_URL=http://<ip-may-tinh>:8787`. Trên Windows, bật Developer Mode nếu Flutter báo thiếu quyền tạo symlink.
+3. Mở app → **Đăng nhập / Đăng ký** (hoặc "Dùng thử không cần tài khoản"). Phiên được ghi nhớ nếu chọn "Ghi nhớ đăng nhập".
+4. **Gợi ý → Theo tủ lạnh → Gemini** (cần đăng nhập): nhập nguyên liệu hoặc chụp/chọn ảnh, kiểm tra lại tên rồi bấm **Gợi ý món từ nguyên liệu**.
+
+Danh mục công thức (~1.800 món Việt từ Món Ngon Mỗi Ngày + 8 món Spoonacular) lấy từ `GET /catalog`; mất kết nối thì app dùng `backend/assets/vietnamese_recipes.json` và `assets/spoonacular.json` đóng gói sẵn. Test: `cargo test` trong `backend/`, `flutter test` ở thư mục gốc.
+
 <div align="center">
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
@@ -84,7 +93,7 @@ mobile/
 │   │   └── main_navigation_screen.dart# Thanh điều hướng 4 tab (IndexedStack)
 │   ├── core/                          # ── Dùng chung ──
 │   │   ├── data/
-│   │   │   ├── mock_data.dart         # Dữ liệu mẫu: công thức, người dùng, thực đơn
+│   │   │   ├── mock_data.dart         # Hồ sơ người dùng minh họa
 │   │   │   └── recipe_repository.dart # Kho công thức (single source of truth)
 │   │   ├── models/                    # recipe.dart · user_profile.dart · meal_plan.dart
 │   │   ├── theme/                     # app_colors.dart · app_theme.dart

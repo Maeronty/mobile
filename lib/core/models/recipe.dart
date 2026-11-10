@@ -94,6 +94,71 @@ class Recipe {
     this.missingIngredients = const [],
   });
 
+  /// Đọc JSON của `GET /api/Recipes/:id` (RecipeDetailDto phía Rust).
+  /// Thiếu dinh dưỡng → các chỉ số = 0 (hiển thị "—"); độ khó "Nâng cao" → "Khó".
+  factory Recipe.fromDetailJson(Map<String, dynamic> json) {
+    double num0(Object? v) => (v as num?)?.toDouble() ?? 0;
+    final n = json['nutrition'] as Map<String, dynamic>?;
+    final cookTime = json['cookTimeMinutes'] as int? ?? 0;
+    final fiber = num0(n?['fiberGrams']);
+    final tags = [for (final t in (json['tags'] as List? ?? const [])) t as String];
+    final difficulty = json['difficulty'] as String? ?? 'Trung bình';
+    final nutrition = NutritionInfo(
+      calories: num0(n?['calories']).round(),
+      proteinGrams: num0(n?['proteinGrams']),
+      carbsGrams: num0(n?['carbsGrams']),
+      fatGrams: num0(n?['fatGrams']),
+      fiberGrams: fiber > 0 ? fiber : null,
+    );
+    final source = json['source'] as String?;
+    return Recipe(
+      id: json['id'] as int,
+      title: json['title'] as String,
+      description: source == null || source.isEmpty ? (json['description'] as String? ?? '') : 'Nguồn: $source',
+      imageAsset: json['imageUrl'] as String? ?? '',
+      category: tags.isNotEmpty ? tags.first : '',
+      tags: tags,
+      cookTimeMinutes: cookTime,
+      difficulty: difficulty == 'Nâng cao' ? 'Khó' : difficulty,
+      servings: json['servings'] as int? ?? 0,
+      calories: nutrition.calories,
+      averageRating: num0(json['averageRating']),
+      totalRatings: json['totalRatings'] as int? ?? 0,
+      isFavorited: json['isFavorited'] as bool? ?? false,
+      nutrition: nutrition,
+      ingredients: [
+        for (final i in json['ingredients'] as List)
+          IngredientItem(
+            name: i['name'] as String,
+            amount: num0(i['amount']),
+            unit: i['unit'] as String? ?? '',
+            note: i['notes'] as String?,
+          ),
+      ],
+      instructions: [
+        for (final s in json['instructions'] as List)
+          InstructionStep(
+            stepNumber: s['stepNumber'] as int,
+            description: s['content'] as String,
+            // Server tự chia đều thời gian nấu cho các bước; món không rõ thời
+            // gian (0) thì con số đó vô nghĩa → bỏ.
+            estimatedMinutes: cookTime > 0 ? s['estimatedMinutes'] as int? : null,
+          ),
+      ],
+    );
+  }
+
+  // Dữ liệu cào từ Món Ngon Mỗi Ngày không có thời gian nấu, khẩu phần và dinh
+  // dưỡng → lưu 0 = "không rõ". Giao diện dùng các getter dưới đây để hiện "—"
+  // thay vì số 0 sai.
+  bool get hasCookTime => cookTimeMinutes > 0;
+  bool get hasServings => servings > 0;
+  bool get hasNutrition => calories > 0;
+  String get cookTimeLabel => hasCookTime ? '$cookTimeMinutes phút' : '— phút';
+  String get cookTimeShortLabel => hasCookTime ? '${cookTimeMinutes}p' : '—';
+  String get caloriesLabel => hasNutrition ? '$calories kcal' : '— kcal';
+  String get servingsLabel => hasServings ? '$servings người' : '— người';
+
   Recipe copyWith({
     bool? isFavorited,
     double? matchScore,
@@ -118,9 +183,12 @@ class Recipe {
       instructions: instructions,
       nutrition: nutrition,
       matchScore: matchScore ?? this.matchScore,
-      matchedIngredients: matchedIngredients.isNotEmpty ? matchedIngredients : this.matchedIngredients,
-      missingIngredients: missingIngredients.isNotEmpty ? missingIngredients : this.missingIngredients,
+      matchedIngredients: matchedIngredients.isNotEmpty
+          ? matchedIngredients
+          : this.matchedIngredients,
+      missingIngredients: missingIngredients.isNotEmpty
+          ? missingIngredients
+          : this.missingIngredients,
     );
   }
 }
-

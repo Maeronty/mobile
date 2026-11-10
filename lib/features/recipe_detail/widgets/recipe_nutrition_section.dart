@@ -11,6 +11,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
 import 'recipe_nutrition_badge.dart';
@@ -27,6 +28,16 @@ class RecipeNutritionSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (nutrition.calories <= 0) {
+      return Text(
+        'Chưa có dữ liệu dinh dưỡng cho món này.',
+        style: TextStyle(
+          fontSize: 13,
+          color: Colors.grey.shade600,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,13 +49,31 @@ class RecipeNutritionSection extends StatelessWidget {
         const SizedBox(height: 12),
         Row(
           children: [
-            RecipeNutritionBadge(title: 'Đạm', value: '${formatGrams(nutrition.proteinGrams)}g', color: AppColors.primary),
+            RecipeNutritionBadge(
+              title: 'Đạm',
+              value: '${formatGrams(nutrition.proteinGrams)}g',
+              color: AppColors.primary,
+            ),
             const SizedBox(width: 8),
-            RecipeNutritionBadge(title: 'Tinh bột', value: '${formatGrams(nutrition.carbsGrams)}g', color: Colors.blue),
+            RecipeNutritionBadge(
+              title: 'Tinh bột',
+              value: '${formatGrams(nutrition.carbsGrams)}g',
+              color: Colors.blue,
+            ),
             const SizedBox(width: 8),
-            RecipeNutritionBadge(title: 'Chất béo', value: '${formatGrams(nutrition.fatGrams)}g', color: Colors.orange),
+            RecipeNutritionBadge(
+              title: 'Chất béo',
+              value: '${formatGrams(nutrition.fatGrams)}g',
+              color: Colors.orange,
+            ),
             const SizedBox(width: 8),
-            RecipeNutritionBadge(title: 'Chất xơ', value: nutrition.fiberGrams == null ? '—' : '${formatGrams(nutrition.fiberGrams!)}g', color: Colors.green),
+            RecipeNutritionBadge(
+              title: 'Chất xơ',
+              value: nutrition.fiberGrams == null
+                  ? '—'
+                  : '${formatGrams(nutrition.fiberGrams!)}g',
+              color: Colors.green,
+            ),
           ],
         ),
       ],

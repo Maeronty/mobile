@@ -12,6 +12,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/recipe_repository.dart';
 import 'pantry_empty_view.dart';
 import 'pantry_info_banner.dart';
 import 'pantry_input_row.dart';
@@ -42,6 +43,28 @@ class PantryTab extends StatelessWidget {
       children: [
         const PantryInfoBanner(),
         PantryInputRow(controller: inputController, onAdd: onAdd),
+        TextButton.icon(
+          icon: const Icon(Icons.list_alt),
+          label: const Text('Chọn nguyên liệu từ Spoonacular'),
+          onPressed: () async {
+            final choices = RecipeRepository.instance.ingredients
+                .where((name) => !items.contains(name)).toList()..sort();
+            final selected = await showDialog<String>(context: context,
+              builder: (context) => SimpleDialog(
+                title: const Text('Nguyên liệu Spoonacular'),
+                children: [
+                  if (choices.isEmpty) const Padding(
+                    padding: EdgeInsets.all(16), child: Text('Bạn đã thêm tất cả nguyên liệu.')),
+                  for (final name in choices) SimpleDialogOption(
+                    onPressed: () => Navigator.pop(context, name), child: Text(name)),
+                ],
+              ));
+            if (selected != null && context.mounted) {
+              inputController.text = selected;
+              onAdd();
+            }
+          },
+        ),
         Expanded(
           child: items.isEmpty
               ? const PantryEmptyView()

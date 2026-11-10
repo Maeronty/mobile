@@ -12,6 +12,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../../core/data/api_client.dart';
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/widgets/difficulty_stars.dart';
@@ -60,8 +61,8 @@ class SurpriseHeroCard extends StatelessWidget {
               SizedBox(
                 height: 220,
                 width: double.infinity,
-                child: Image.asset(
-                  recipe.imageAsset,
+                child: Image.network(
+                  ApiClient.imageUrl(recipe.imageAsset),
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
                     color: AppColors.primaryLight,
@@ -161,19 +162,19 @@ class SurpriseHeroCard extends StatelessWidget {
                   children: [
                     SurpriseStatItem(
                       icon: Icons.access_time_rounded,
-                      label: '${recipe.cookTimeMinutes} phút',
+                      label: recipe.cookTimeLabel,
                       sublabel: 'Thời gian',
                       color: AppColors.primary,
                     ),
                     SurpriseStatItem(
                       icon: Icons.local_fire_department_rounded,
-                      label: '${recipe.calories} kcal',
+                      label: recipe.caloriesLabel,
                       sublabel: 'Năng lượng',
                       color: Colors.deepOrange,
                     ),
                     SurpriseStatItem(
                       icon: Icons.people_outline_rounded,
-                      label: '${recipe.servings} người',
+                      label: recipe.servingsLabel,
                       sublabel: 'Khẩu phần',
                       color: Colors.blue,
                     ),

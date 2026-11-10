@@ -12,6 +12,8 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
+import '../data/api_client.dart';
 import '../models/recipe.dart';
 import '../theme/app_colors.dart';
 import '../../features/favorites/favorites_controller.dart';
@@ -62,7 +64,9 @@ class RecipeCard extends StatelessWidget {
           ],
         ),
         clipBehavior: Clip.antiAlias,
-        child: isHorizontal ? _buildHorizontalLayout(context, isFav) : _buildVerticalLayout(context, isFav),
+        child: isHorizontal
+            ? _buildHorizontalLayout(context, isFav)
+            : _buildVerticalLayout(context, isFav),
       ),
     );
   }
@@ -76,8 +80,8 @@ class RecipeCard extends StatelessWidget {
           children: [
             AspectRatio(
               aspectRatio: 16 / 10,
-              child: Image.asset(
-                recipe.imageAsset,
+              child: Image.network(
+                ApiClient.imageUrl(recipe.imageAsset),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey.shade200,
@@ -129,7 +133,9 @@ class RecipeCard extends StatelessWidget {
                 color: Colors.transparent,
                 child: IconButton(
                   icon: Icon(
-                    isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    isFav
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
                     color: isFav ? AppColors.accent : Colors.white,
                     size: 22,
                   ),
@@ -146,7 +152,10 @@ class RecipeCard extends StatelessWidget {
                 bottom: 8,
                 left: 8,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primaryDark,
                     borderRadius: BorderRadius.circular(6),
@@ -154,13 +163,17 @@ class RecipeCard extends StatelessWidget {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.3),
                         blurRadius: 4,
-                      )
+                      ),
                     ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.bolt_rounded, size: 14, color: Colors.amber),
+                      const Icon(
+                        Icons.bolt_rounded,
+                        size: 14,
+                        color: Colors.amber,
+                      ),
                       const SizedBox(width: 4),
                       Text(
                         '${(recipe.matchScore! * 100).toInt()}% Phù hợp',
@@ -216,7 +229,7 @@ class RecipeCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 2),
                       Text(
-                        '${recipe.cookTimeMinutes}p',
+                        recipe.cookTimeShortLabel,
                         style: TextStyle(
                           fontSize: 11,
                           color: Theme.of(context).brightness == Brightness.dark
@@ -236,10 +249,14 @@ class RecipeCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, size: 13, color: AppColors.accentOrange),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 13,
+                        color: AppColors.accentOrange,
+                      ),
                       const SizedBox(width: 2),
                       Text(
-                        '${recipe.calories} kcal',
+                        recipe.caloriesLabel,
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -251,10 +268,16 @@ class RecipeCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.star_rounded, size: 13, color: Colors.amber),
+                      const Icon(
+                        Icons.star_rounded,
+                        size: 13,
+                        color: Colors.amber,
+                      ),
                       const SizedBox(width: 2),
                       Text(
-                        recipe.averageRating.toStringAsFixed(1),
+                        recipe.totalRatings == 0
+                            ? '—'
+                            : recipe.averageRating.toStringAsFixed(1),
                         style: const TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
@@ -281,8 +304,8 @@ class RecipeCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(
-                recipe.imageAsset,
+              Image.network(
+                ApiClient.imageUrl(recipe.imageAsset),
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
                   color: Colors.grey.shade200,
@@ -294,7 +317,10 @@ class RecipeCard extends StatelessWidget {
                   top: 6,
                   left: 6,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
                     decoration: BoxDecoration(
                       color: AppColors.primaryDark,
                       borderRadius: BorderRadius.circular(4),
@@ -341,7 +367,9 @@ class RecipeCard extends StatelessWidget {
                         onFavoriteToggled?.call();
                       },
                       child: Icon(
-                        isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        isFav
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
                         color: isFav ? AppColors.accent : Colors.grey,
                         size: 20,
                       ),
@@ -362,7 +390,7 @@ class RecipeCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 3),
                     Text(
-                      '${recipe.cookTimeMinutes} phút',
+                      recipe.cookTimeLabel,
                       style: TextStyle(
                         fontSize: 11,
                         color: Theme.of(context).brightness == Brightness.dark
@@ -371,11 +399,19 @@ class RecipeCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Icon(Icons.local_fire_department_rounded, size: 13, color: AppColors.accentOrange),
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 13,
+                      color: AppColors.accentOrange,
+                    ),
                     const SizedBox(width: 3),
                     Text(
-                      '${recipe.calories} kcal',
-                      style: const TextStyle(fontSize: 11, color: AppColors.accentOrange, fontWeight: FontWeight.w600),
+                      recipe.caloriesLabel,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.accentOrange,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),

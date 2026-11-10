@@ -15,8 +15,18 @@
 import 'package:flutter/material.dart';
 
 import 'app/app.dart';
+import 'core/data/recipe_repository.dart';
+import 'features/auth/auth_controller.dart';
 
-void main() {
+// FLOW KHỞI ĐỘNG
+//   1. Khôi phục phiên đăng nhập đã ghi nhớ (nếu có) — nhanh, chỉ 1 request nhỏ.
+//   2. Vẽ giao diện ngay; AuthGate trong app.dart chọn màn đăng nhập hay vào app.
+//      Home tự tải từng trang món (không cần danh mục đầy đủ).
+//   3. Danh mục đầy đủ (cho Gợi ý / Surprise / Tủ lạnh / Yêu thích) tải NGẦM,
+//      không chặn việc mở app.
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AuthController.instance.restoreSession();
+  RecipeRepository.instance.ensureLoaded();
   runApp(const TomatoFoodTipApp());
 }

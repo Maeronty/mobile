@@ -10,6 +10,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
 
@@ -36,7 +37,9 @@ class RecipeIngredientTile extends StatelessWidget {
         child: Row(
           children: [
             Icon(
-              isChecked ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+              isChecked
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
               color: isChecked ? AppColors.primary : Colors.grey.shade400,
               size: 20,
             ),
@@ -53,7 +56,7 @@ class RecipeIngredientTile extends StatelessWidget {
               ),
             ),
             Text(
-              '$amountText ${item.unit}',
+              '$amountText ${item.unit}'.trim(),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,

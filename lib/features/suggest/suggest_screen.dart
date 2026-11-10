@@ -17,6 +17,8 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../core/data/recipe_repository.dart';
+import 'ai_suggest_screen.dart';
 import 'suggest_controller.dart';
 import 'widgets/suggest_empty_view.dart';
 import 'widgets/suggest_ingredient_input.dart';
@@ -47,17 +49,22 @@ class _SuggestScreenState extends State<SuggestScreen> {
     super.initState();
     _controller = SuggestController(initialIngredients: widget.initialIngredients);
     _controller.addListener(_onControllerChanged);
+    // Danh mục món tải ngầm sau khi mở app → tải xong thì lọc lại kết quả.
+    RecipeRepository.instance.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
+    RecipeRepository.instance.removeListener(_onControllerChanged);
     _controller.dispose();
     _textController.dispose();
     super.dispose();
   }
 
-  void _onControllerChanged() => setState(() {});
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
 
   /// Thêm nguyên liệu; chỉ xoá ô nhập khi thêm thành công.
   void _addIngredient(String name) {
@@ -78,6 +85,14 @@ class _SuggestScreenState extends State<SuggestScreen> {
       appBar: AppBar(
         title: const Text('Gợi Ý Món Ăn Thông Minh'),
         actions: [
+          if (isIngredientMode)
+            TextButton.icon(
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Gemini'),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => AiSuggestScreen(ingredients: selectedIngredients),
+              )),
+            ),
           SuggestSortMenu(onSelected: _controller.setSortMode),
         ],
       ),
