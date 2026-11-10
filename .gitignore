@@ -51,3 +51,5 @@ app.*.map.json
 .codegraph/
 .omp/
 AGENTS.md
+
+/server/.env

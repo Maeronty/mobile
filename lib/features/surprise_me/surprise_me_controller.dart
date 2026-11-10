@@ -31,13 +31,7 @@ enum SurpriseState {
 }
 
 class SurpriseMeController extends ChangeNotifier {
-  static const List<String> availableCategories = [
-    'Món Việt',
-    'Healthy',
-    'Món Âu',
-    'Ăn vặt',
-    'Tráng miệng',
-  ];
+  static List<String> get availableCategories => RecipeRepository.instance.categories;
 
   static const List<String> availableDifficulties = [
     'Dễ',

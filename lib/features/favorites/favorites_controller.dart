@@ -31,7 +31,7 @@ class FavoritesController extends ChangeNotifier {
   FavoritesController._();
 
   /// Id các món yêu thích mặc định khi mở app (dữ liệu demo).
-  final Set<int> _favoriteIds = {1, 2, 4, 8};
+  final Set<int> _favoriteIds = {};
 
   /// Bản chỉ đọc của tập id yêu thích.
   Set<int> get favoriteIds => Set.unmodifiable(_favoriteIds);

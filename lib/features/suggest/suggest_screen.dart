@@ -17,6 +17,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import 'ai_suggest_screen.dart';
 import 'suggest_controller.dart';
 import 'widgets/suggest_empty_view.dart';
 import 'widgets/suggest_ingredient_input.dart';
@@ -78,6 +79,14 @@ class _SuggestScreenState extends State<SuggestScreen> {
       appBar: AppBar(
         title: const Text('Gợi Ý Món Ăn Thông Minh'),
         actions: [
+          if (isIngredientMode)
+            TextButton.icon(
+              icon: const Icon(Icons.auto_awesome),
+              label: const Text('Gemini'),
+              onPressed: () => Navigator.push(context, MaterialPageRoute(
+                builder: (_) => AiSuggestScreen(ingredients: selectedIngredients),
+              )),
+            ),
           SuggestSortMenu(onSelected: _controller.setSortMode),
         ],
       ),

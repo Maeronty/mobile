@@ -47,7 +47,7 @@ class RecipeQuickStats extends StatelessWidget {
           Container(width: 1, height: 32, color: Colors.grey.withOpacity(0.2)),
           RecipeStatItem(
             icon: Icons.star_rounded,
-            value: '${recipe.averageRating} (${recipe.totalRatings})',
+            value: recipe.totalRatings == 0 ? "Chưa có" : "${recipe.averageRating} (${recipe.totalRatings})",
             label: 'Đánh giá',
             iconColor: Colors.amber,
           ),

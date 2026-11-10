@@ -1,5 +1,17 @@
 # 🍲 Bếp Việt - Food Tip & Smart Cooking System
 
+## Chạy tính năng Gemini và Spoonacular
+
+Trang chủ, Tủ lạnh, Gợi ý và Thực đơn dùng chung danh mục công thức Spoonacular. Ứng dụng đọc `GET /catalog` khi khởi động và dùng bản tiếng Việt trong `assets/spoonacular.json` khi mất kết nối. Máy chủ làm mới danh mục hết hạn trong nền. Trong **Túi Thần Kỳ → Tủ lạnh**, chọn **Chọn nguyên liệu từ Spoonacular** để thêm vào tủ.
+
+1. Cài Node.js 22+ và chạy `flutter pub get` ở thư mục dự án. Trên Windows, bật Developer Mode nếu Flutter báo thiếu quyền tạo symlink.
+2. Trong `server/.env`, đặt `GEMINI_API_KEYS` (các khóa theo thứ tự, cách nhau bằng dấu phẩy) và `SPOONACULAR_API_KEY` trên hai dòng theo dạng `TÊN_BIẾN=giá_trị`. File này được Git bỏ qua. Khi Gemini trả HTTP 429, máy chủ thử khóa tiếp theo và tạm bỏ qua khóa bị giới hạn theo thời gian Retry-After, mặc định 60 giây. Có thể đặt `GEMINI_MODEL` để đổi model hỗ trợ ảnh và JSON.
+3. Chạy `node --env-file=server/.env server/food.mjs` và giữ terminal mở. Máy chủ demo lắng nghe tại `127.0.0.1:8787`.
+4. Với Android kết nối ADB, chạy `adb reverse tcp:8787 tcp:8787`, rồi `flutter run`. Với Chrome hoặc iOS Simulator trên cùng máy, chạy `flutter run` và chọn thiết bị. iPhone thật cần máy chủ HTTPS có thể truy cập được và tham số `--dart-define=FOOD_API_URL=https://ten-mien-cua-ban`. Khi triển khai công khai, bổ sung xác thực và giới hạn lượt gọi phía máy chủ.
+5. Vào **Gợi ý → Theo tủ lạnh → Gemini**. Nhập nguyên liệu hoặc chụp/chọn ảnh. Kiểm tra lại tên nguyên liệu rồi bấm **Gợi ý món từ nguyên liệu**. Mở một món để xem danh sách đã có và cần thêm bằng tiếng Việt.
+
+Máy chủ gửi ảnh đến Gemini, dùng Gemini dịch nguyên liệu sang tiếng Anh để tìm trên Spoonacular, rồi xếp hạng và dịch kết quả sang tiếng Việt. Kiểm tra luồng xử lý bằng `node --test server/food.test.mjs`.
+
 <div align="center">
 
 ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
@@ -84,7 +96,7 @@ mobile/
 │   │   └── main_navigation_screen.dart# Thanh điều hướng 4 tab (IndexedStack)
 │   ├── core/                          # ── Dùng chung ──
 │   │   ├── data/
-│   │   │   ├── mock_data.dart         # Dữ liệu mẫu: công thức, người dùng, thực đơn
+│   │   │   ├── mock_data.dart         # Hồ sơ người dùng minh họa
 │   │   │   └── recipe_repository.dart # Kho công thức (single source of truth)
 │   │   ├── models/                    # recipe.dart · user_profile.dart · meal_plan.dart
 │   │   ├── theme/                     # app_colors.dart · app_theme.dart
