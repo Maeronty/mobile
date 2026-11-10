@@ -46,19 +46,21 @@ class FavoritesTab extends StatelessWidget {
       );
     }
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: recipes.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
-      ),
-      itemBuilder: (context, index) {
-        return RecipeCard(
-          recipe: recipes[index],
-          onFavoriteToggled: onFavoriteToggled,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: recipes.length,
+          gridDelegate: RecipeCard.gridDelegate(
+            context,
+            constraints.maxWidth - 32,
+          ),
+          itemBuilder: (context, index) {
+            return RecipeCard(
+              recipe: recipes[index],
+              onFavoriteToggled: onFavoriteToggled,
+            );
+          },
         );
       },
     );

@@ -50,20 +50,19 @@ class HomeTrendingSection extends StatelessWidget {
         const SizedBox(height: 12),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: recipes.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 0.72,
-            ),
-            itemBuilder: (context, index) {
-              return RecipeCard(
-                recipe: recipes[index],
-                onFavoriteToggled: onFavoriteToggled,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: recipes.length,
+                gridDelegate: RecipeCard.gridDelegate(context, constraints.maxWidth),
+                itemBuilder: (context, index) {
+                  return RecipeCard(
+                    recipe: recipes[index],
+                    onFavoriteToggled: onFavoriteToggled,
+                  );
+                },
               );
             },
           ),

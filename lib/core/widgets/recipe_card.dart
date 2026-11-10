@@ -30,6 +30,26 @@ class RecipeCard extends StatelessWidget {
     this.onFavoriteToggled,
   });
 
+  /// Tạo delegate lưới co giãn theo chiều rộng để thẻ không bị dư khoảng trắng.
+  static SliverGridDelegateWithFixedCrossAxisCount gridDelegate(
+    BuildContext context,
+    double availableWidth, {
+    double spacing = 12,
+  }) {
+    final columns = availableWidth < 520
+        ? 2
+        : (availableWidth / 230).floor().clamp(2, 5);
+    final tileWidth = (availableWidth - spacing * (columns - 1)) / columns;
+    final imageHeight = (tileWidth - 2) * 10 / 16;
+    final infoHeight = 32 + MediaQuery.textScalerOf(context).scale(68);
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: columns,
+      crossAxisSpacing: spacing,
+      mainAxisSpacing: spacing,
+      mainAxisExtent: imageHeight + infoHeight,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isFav = FavoritesController.instance.isFavorite(recipe.id);
@@ -69,6 +89,7 @@ class RecipeCard extends StatelessWidget {
 
   Widget _buildVerticalLayout(BuildContext context, bool isFav) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Image & Badges
