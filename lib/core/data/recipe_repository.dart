@@ -1,34 +1,49 @@
+// =============================================================================
+// RECIPE REPOSITORY — Kho công thức dùng chung cho toàn app
+// =============================================================================
+//
+// VAI TRÒ
+//   Nguồn dữ liệu duy nhất cho danh sách công thức (danh mục Spoonacular đã
+//   dịch tiếng Việt). Home, Gợi ý, Yêu thích, Thực đơn... đều đọc qua đây.
+//
+// FLOW (`load`, gọi trong main trước khi vẽ giao diện)
+//   1. Gọi `GET /catalog` của backend Rust, chờ tối đa 3 giây.
+//   2. Thành công → dùng danh mục từ server.
+//   3. Lỗi bất kỳ (server tắt, mất mạng, JSON sai kiểu...) → dùng bản tiếng
+//      Việt có sẵn `assets/spoonacular.json`. Bắt mọi lỗi, không chỉ Exception,
+//      để dữ liệu hỏng từ server không làm app trắng màn hình lúc khởi động.
+//
+// LƯU Ý
+//   `findById` không thấy id → trả món đầu tiên thay vì crash màn chi tiết.
+// =============================================================================
+
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 
 import '../models/recipe.dart';
+import 'api_client.dart';
 
 class RecipeRepository {
   RecipeRepository._();
   static final instance = RecipeRepository._();
-  static const apiBase = String.fromEnvironment('FOOD_API_URL',
-      defaultValue: 'http://127.0.0.1:8787');
 
   List<Recipe> _recipes = [];
   List<Recipe> get all => _recipes;
   List<String> get categories => all.map((r) => r.category).toSet().toList();
   List<String> get ingredients => all.expand((r) => r.ingredients)
       .map((i) => i.name).toSet().toList();
-  Recipe findById(int id) => all.firstWhere((r) => r.id == id);
+  Recipe findById(int id) => all.firstWhere((r) => r.id == id, orElse: () => all.first);
 
   Future<void> load({bool online = true}) async {
     if (online) {
       try {
-        final response = await http.get(Uri.parse('$apiBase/catalog'))
-            .timeout(const Duration(seconds: 5));
-        if (response.statusCode == 200) {
-          _recipes = _decode(utf8.decode(response.bodyBytes));
-          return;
-        }
-      } on Exception {
-        // The bundled catalog is a Vietnamese snapshot of the same API.
+        final data = await ApiClient.instance.get('/catalog', timeout: const Duration(seconds: 3));
+        _recipes = _decode(jsonEncode(data));
+        return;
+      } catch (e) {
+        debugPrint('RecipeRepository: dùng danh mục có sẵn ($e)');
       }
     }
     _recipes = _decode(await rootBundle.loadString('assets/spoonacular.json'));
