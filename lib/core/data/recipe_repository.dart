@@ -11,7 +11,14 @@
 //   - ~1.800 món Việt cào từ Món Ngon Mỗi Ngày, id ≥ 1.000.000
 //     (`backend/assets/vietnamese_recipes.json`, tạo bởi tools/import_monngon.py).
 //
-// FLOW (`load`, gọi trong main trước khi vẽ giao diện)
+// AI DÙNG KHO NÀY
+//   Home / danh mục / chi tiết KHÔNG dùng kho này nữa — chúng gọi API phân trang
+//   (xem recipe_feed_source.dart). Kho chỉ phục vụ Gợi ý theo nguyên liệu,
+//   Surprise Me, Tủ lạnh, Yêu thích, Thực đơn, và làm dữ liệu dự phòng offline.
+//   main() bắt đầu tải NGẦM, không chờ → app mở ngay. Tải xong →
+//   notifyListeners() để các màn đang hiển thị dựng lại.
+//
+// FLOW (`load`)
 //   1. Gọi `GET /catalog` của backend Rust, chờ tối đa 5 giây.
 //   2. Thành công → dùng danh mục từ server.
 //   3. Lỗi bất kỳ (server tắt, mất mạng, JSON sai kiểu...) → đọc 2 file JSON
@@ -36,7 +43,7 @@ import 'package:flutter/services.dart';
 import '../models/recipe.dart';
 import 'api_client.dart';
 
-class RecipeRepository {
+class RecipeRepository extends ChangeNotifier {
   RecipeRepository._();
   static final instance = RecipeRepository._();
 
@@ -49,6 +56,13 @@ class RecipeRepository {
   ];
 
   List<Recipe> _recipes = [];
+  Future<void>? _loading;
+
+  /// Đã có dữ liệu (từ server hoặc file đóng gói).
+  bool get isLoaded => _recipes.isNotEmpty;
+
+  /// Tải nếu chưa tải; nhiều nơi gọi cùng lúc chỉ tải một lần.
+  Future<void> ensureLoaded() => isLoaded ? Future.value() : (_loading ??= load());
   List<Recipe> get all => _recipes;
 
   /// Danh mục sắp theo số món giảm dần; "Món khác" luôn đứng cuối.
@@ -80,6 +94,7 @@ class RecipeRepository {
           timeout: const Duration(seconds: 5),
         );
         _recipes = _sorted(decode(data as List));
+        notifyListeners();
         return;
       } catch (e) {
         debugPrint('RecipeRepository: dùng danh mục có sẵn ($e)');
@@ -90,6 +105,7 @@ class RecipeRepository {
       rows.addAll(jsonDecode(await rootBundle.loadString(file)) as List);
     }
     _recipes = _sorted(decode(rows));
+    notifyListeners();
   }
 
   List<Recipe> _sorted(List<Recipe> recipes) {

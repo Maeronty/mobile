@@ -1,146 +1,186 @@
 // =============================================================================
-// FEATURE: TRANG CHỦ — KHÁM PHÁ CÔNG THỨC (Explore & Home)
+// FEATURE: TRANG CHỦ — KHÁM PHÁ MÓN (danh sách vô hạn có phân trang)
 // =============================================================================
 //
 // VAI TRÒ
-//   Chứa dữ liệu hiển thị và logic lọc của Trang chủ:
-//     - Banner Coverflow tự động trượt.
-//     - Lọc công thức theo danh mục.
-//     - Bộ sưu tập "Nấu nhanh" (≤ 25 phút).
+//   Toàn bộ dữ liệu + logic của Home: banner nổi bật, danh mục, lưới món tải
+//   từng trang khi cuộn. HomeScreen chỉ hiển thị và gọi các hàm ở đây.
 //
-// FLOW
-//   1. HomeScreen tạo HomeController trong initState và lắng nghe thay đổi.
-//   2. BANNER: HomeScreen chạy Timer mỗi `bannerInterval` (4s):
-//        - Hỏi controller `nextBannerIndex` = (index hiện tại + 1) % số banner
-//          → quay vòng về banner đầu sau banner cuối.
-//        - PageView trượt tới trang đó → `onPageChanged` → `setBannerIndex(idx)`
-//          → cập nhật chấm chỉ báo bên dưới banner.
-//   3. DANH MỤC: chạm chip → `selectCategory(cat)`:
-//        - "Tất cả"        → `filteredRecipes` trả về toàn bộ công thức.
-//        - Danh mục khác   → chỉ giữ công thức có `category` trùng khớp.
-//   4. NẤU NHANH: `fastRecipes` lọc công thức có `cookTimeMinutes ≤ 25`.
+// FLOW KHỞI TẠO (`init`)
+//   1. Cùng lúc gọi: banner (`featured`), danh mục (`categories`), trang 1.
+//   2. Server lỗi ở trang 1 → chuyển sang nguồn dự phòng (dữ liệu đóng gói
+//      trong app, cùng cách phân trang), `isOffline = true` để UI báo nhẹ.
 //
-// LƯU Ý
-//   - Timer & PageController là đối tượng UI nên vẫn nằm trong HomeScreen,
-//     controller chỉ quyết định "trang tiếp theo là trang nào".
+// FLOW CUỘN VÔ HẠN (`loadMore`)
+//   1. HomeScreen gọi khi còn < ~1 màn hình nữa là chạm cuối danh sách.
+//   2. Bỏ qua nếu đang tải / đã hết / đang lỗi (chờ người dùng bấm thử lại).
+//   3. Tải trang kế, nối vào `items`, bỏ món trùng id (phòng dữ liệu đổi giữa
+//      các lần gọi).
+//
+// ĐỔI DANH MỤC (`selectCategory`) / KÉO ĐỂ LÀM MỚI (`refresh`)
+//   Xoá danh sách, tăng `_generation` rồi tải lại trang 1. Response của lần gọi
+//   cũ về muộn (người dùng bấm chip liên tục) bị bỏ qua nhờ so `_generation`.
+//
+// HIỆU ỨNG XUẤT HIỆN
+//   `shouldAnimate(id)` trả true đúng MỘT lần cho mỗi món → thẻ chỉ trượt vào
+//   lần đầu xuất hiện, cuộn lên xuống không nhấp nháy lại.
 // =============================================================================
 
 import 'package:flutter/foundation.dart';
 
-import '../../core/data/recipe_repository.dart';
-import '../../core/models/recipe.dart';
+import '../../core/data/api_client.dart';
+import '../../core/data/recipe_feed_source.dart';
+import '../../core/models/recipe_summary.dart';
 
 class HomeController extends ChangeNotifier {
-  /// Danh mục đặc biệt: hiển thị toàn bộ công thức.
-  static const String allCategory = 'Tất cả';
-
-  /// Ngưỡng thời gian (phút) để một món được xem là "nấu nhanh".
-  static const int fastCookMaxMinutes = 25;
-
-  /// Khoảng thời gian giữa 2 lần banner tự trượt.
-  static const Duration bannerInterval = Duration(seconds: 4);
-
-  /// Dữ liệu banner nổi bật đầu trang.
-  /// Danh mục tiêu biểu để chọn banner (mỗi danh mục 1 món Việt có ảnh).
-  static const List<String> bannerCategories = [
-    'Bún, Phở & Mì',
-    'Canh',
-    'Cơm & Xôi',
-    'Món kho',
-  ];
-
-  /// 4 banner: món Việt có ảnh đầu tiên của từng danh mục tiêu biểu.
-  static List<Map<String, String>> get heroBanners {
-    final viet = RecipeRepository.instance.all
-        .where(
-          (r) =>
-              r.imageAsset.isNotEmpty &&
-              r.id >= RecipeRepository.vietnameseIdBase,
-        )
-        .toList();
-    final picks = [
-      for (final c in bannerCategories)
-        ...viet.where((r) => r.category == c).take(1),
-    ];
-    final list = picks.isNotEmpty
-        ? picks
-        : RecipeRepository.instance.all.take(4).toList();
-    return list
-        .map(
-          (r) => {
-            'title': r.title,
-            'subtitle': r.description,
-            'image': r.imageAsset,
-            'tag': r.category.toUpperCase(),
-          },
-        )
-        .toList();
-  }
-
-  /// Số món hiển thị mỗi lần ở lưới Home (danh mục có thể có hàng trăm món;
-  /// dựng hết một lúc sẽ rất giật).
   static const int pageSize = 20;
+  static const Duration bannerInterval = Duration(seconds: 5);
 
-  /// Danh sách chip danh mục.
-  static List<String> get categories => [
-    allCategory,
-    ...RecipeRepository.instance.categories,
-  ];
-
-  String _selectedCategory = allCategory;
-  int _visibleCount = pageSize;
-  int _currentBannerIndex = 0;
-
-  String get selectedCategory => _selectedCategory;
-  int get currentBannerIndex => _currentBannerIndex;
-  bool get isAllCategory => _selectedCategory == allCategory;
-
-  // ---------------------------------------------------------------------------
-  // BANNER
-  // ---------------------------------------------------------------------------
-
-  /// Trang banner kế tiếp (quay vòng về 0 sau trang cuối).
-  int get nextBannerIndex => (_currentBannerIndex + 1) % heroBanners.length;
-
-  /// Gọi khi PageView đổi trang (do người dùng vuốt hoặc timer tự trượt).
-  void setBannerIndex(int index) {
-    _currentBannerIndex = index;
-    notifyListeners();
+  HomeController({RecipeFeedSource? source, RecipeFeedSource? fallback})
+      : _primary = source ?? ApiRecipeFeedSource(),
+        _fallback = fallback ?? LocalRecipeFeedSource() {
+    _source = _primary;
   }
 
-  // ---------------------------------------------------------------------------
-  // DANH MỤC & BỘ SƯU TẬP
-  // ---------------------------------------------------------------------------
+  /// Nguồn chính (server); `_source` có thể tạm chuyển sang `_fallback`.
+  final RecipeFeedSource _primary;
+  late RecipeFeedSource _source;
+  final RecipeFeedSource _fallback;
 
-  void selectCategory(String category) {
+  List<RecipeSummary> _featured = [];
+  List<CategoryCount> _categories = [];
+  String? _selectedCategory;
+  final List<RecipeSummary> _items = [];
+  final Set<int> _itemIds = {};
+  final Set<int> _animated = {};
+  int _page = 0;
+  int _total = 0;
+  bool _hasMore = true;
+  bool _loading = false;
+  bool _isOffline = false;
+  String? _error;
+  int _generation = 0;
+  bool _disposed = false;
+
+  List<RecipeSummary> get featured => _featured;
+  List<CategoryCount> get categories => _categories;
+  String? get selectedCategory => _selectedCategory;
+  List<RecipeSummary> get items => _items;
+  int get total => _total;
+  bool get hasMore => _hasMore;
+  bool get isLoading => _loading;
+  bool get isFirstLoad => _loading && _items.isEmpty;
+  bool get isOffline => _isOffline;
+  String? get error => _error;
+
+  /// Tổng số món của tất cả danh mục (cho chip "Tất cả").
+  int get allCount => _categories.fold(0, (sum, c) => sum + c.count);
+
+  /// Tiêu đề phần lưới: "Tất cả món" hoặc tên danh mục đang chọn.
+  String get sectionTitle => _selectedCategory ?? 'Tất cả món';
+
+  Future<void> init() async {
+    await Future.wait([_loadFirstPage(), _loadMeta()]);
+  }
+
+  Future<void> _loadMeta() async {
+    try {
+      final results = await Future.wait([_source.featured(), _source.categories()]);
+      _featured = results[0] as List<RecipeSummary>;
+      _categories = results[1] as List<CategoryCount>;
+    } catch (_) {
+      try {
+        final results = await Future.wait([_fallback.featured(), _fallback.categories()]);
+        _featured = results[0] as List<RecipeSummary>;
+        _categories = results[1] as List<CategoryCount>;
+      } catch (e) {
+        debugPrint('HomeController: không tải được banner/danh mục: $e');
+      }
+    }
+    _notify();
+  }
+
+  Future<void> _loadFirstPage() async {
+    _items.clear();
+    _itemIds.clear();
+    _page = 0;
+    _total = 0;
+    _hasMore = true;
+    _error = null;
+    await loadMore();
+  }
+
+  Future<void> loadMore() async {
+    if (_loading || !_hasMore || _error != null) return;
+    final generation = _generation;
+    _loading = true;
+    _notify();
+
+    try {
+      final page = await _fetch(_page + 1);
+      if (generation != _generation) return; // đã đổi danh mục trong lúc chờ
+      for (final item in page.items) {
+        if (_itemIds.add(item.id)) _items.add(item);
+      }
+      _page = page.page;
+      _total = page.total;
+      _hasMore = page.hasMore;
+    } catch (e) {
+      if (generation != _generation) return;
+      _error = e is ApiException ? e.message : 'Không tải được danh sách món.';
+    } finally {
+      if (generation == _generation) {
+        _loading = false;
+        _notify();
+      }
+    }
+  }
+
+  /// Lấy 1 trang; trang đầu mà server lỗi → chuyển hẳn sang nguồn dự phòng.
+  Future<RecipePage> _fetch(int page) async {
+    try {
+      return await _source.page(page: page, pageSize: pageSize, category: _selectedCategory);
+    } catch (e) {
+      if (page != 1 || identical(_source, _fallback)) rethrow;
+      debugPrint('HomeController: server lỗi, dùng dữ liệu ngoại tuyến ($e)');
+      _source = _fallback;
+      _isOffline = true;
+      return _source.page(page: page, pageSize: pageSize, category: _selectedCategory);
+    }
+  }
+
+  /// Bấm "Thử lại" sau lỗi.
+  Future<void> retry() {
+    _error = null;
+    return loadMore();
+  }
+
+  Future<void> selectCategory(String? category) async {
+    if (category == _selectedCategory) return;
     _selectedCategory = category;
-    _visibleCount = pageSize;
-    notifyListeners();
+    _generation++;
+    _loading = false;
+    _notify();
+    await _loadFirstPage();
   }
 
-  /// Công thức thuộc danh mục đang chọn.
-  List<Recipe> get filteredRecipes {
-    final all = RecipeRepository.instance.all;
-    if (isAllCategory) return all;
-    return all.where((r) => r.category == _selectedCategory).toList();
+  Future<void> refresh() async {
+    _generation++;
+    _loading = false;
+    _source = _primary; // thử lại server
+    _isOffline = false;
+    await Future.wait([_loadFirstPage(), _loadMeta()]);
   }
 
-  /// Phần đang hiển thị của [filteredRecipes].
-  List<Recipe> get visibleRecipes =>
-      filteredRecipes.take(_visibleCount).toList();
+  bool shouldAnimate(int id) => _animated.add(id);
 
-  bool get hasMore => filteredRecipes.length > _visibleCount;
-
-  /// Bấm "Xem thêm" → hiện thêm [pageSize] món.
-  void showMore() {
-    _visibleCount += pageSize;
-    notifyListeners();
+  void _notify() {
+    if (!_disposed) notifyListeners();
   }
 
-  /// Công thức nấu nhanh (≤ [fastCookMaxMinutes] phút).
-  List<Recipe> get fastRecipes {
-    return RecipeRepository.instance.all
-        .where((r) => r.hasCookTime && r.cookTimeMinutes <= fastCookMaxMinutes)
-        .toList();
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 }

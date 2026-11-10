@@ -17,6 +17,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+import '../../core/data/recipe_repository.dart';
 import 'ai_suggest_screen.dart';
 import 'suggest_controller.dart';
 import 'widgets/suggest_empty_view.dart';
@@ -48,17 +49,22 @@ class _SuggestScreenState extends State<SuggestScreen> {
     super.initState();
     _controller = SuggestController(initialIngredients: widget.initialIngredients);
     _controller.addListener(_onControllerChanged);
+    // Danh mục món tải ngầm sau khi mở app → tải xong thì lọc lại kết quả.
+    RecipeRepository.instance.addListener(_onControllerChanged);
   }
 
   @override
   void dispose() {
     _controller.removeListener(_onControllerChanged);
+    RecipeRepository.instance.removeListener(_onControllerChanged);
     _controller.dispose();
     _textController.dispose();
     super.dispose();
   }
 
-  void _onControllerChanged() => setState(() {});
+  void _onControllerChanged() {
+    if (mounted) setState(() {});
+  }
 
   /// Thêm nguyên liệu; chỉ xoá ô nhập khi thêm thành công.
   void _addIngredient(String name) {

@@ -91,6 +91,10 @@ pub fn create_app(state: AppState) -> Router {
             "/api/recipes/ingredients",
             get(handlers::recipe::get_ingredients),
         )
+        // Danh sách món có phân trang cho Home / danh mục
+        .route("/api/Recipes/page", get(handlers::feed::page))
+        .route("/api/Recipes/categories", get(handlers::feed::categories))
+        .route("/api/Recipes/featured", get(handlers::feed::featured))
         .route("/api/Recipes/stats", get(handlers::recipe::get_stats))
         .route("/api/recipes/stats", get(handlers::recipe::get_stats))
         // Favorites routes (Milestone M4)
