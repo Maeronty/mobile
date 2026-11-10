@@ -64,6 +64,8 @@ flutter:
   assets:
     - assets/images/
     - assets/spoonacular.json
+    # Món Việt (dùng chung file seed của backend Rust, không sao chép)
+    - backend/assets/vietnamese_recipes.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

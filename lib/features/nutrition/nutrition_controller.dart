@@ -117,7 +117,9 @@ class NutritionController extends ChangeNotifier {
   }
 
   MealPlan _buildPlan() {
-    final recipes = [...RecipeRepository.instance.all];
+    // Chỉ dùng món có dữ liệu dinh dưỡng; không có món nào thì dùng tất cả.
+    final withNutrition = RecipeRepository.instance.all.where((r) => r.hasNutrition).toList();
+    final recipes = withNutrition.isNotEmpty ? withNutrition : [...RecipeRepository.instance.all];
     if (_selectedHealthGoal == 'Giảm cân') {
       recipes.sort((a, b) => a.calories.compareTo(b.calories));
     } else if (_selectedHealthGoal == 'Tăng cơ') {

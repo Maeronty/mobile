@@ -94,6 +94,17 @@ class Recipe {
     this.missingIngredients = const [],
   });
 
+  // Dữ liệu cào từ Món Ngon Mỗi Ngày không có thời gian nấu, khẩu phần và dinh
+  // dưỡng → lưu 0 = "không rõ". Giao diện dùng các getter dưới đây để hiện "—"
+  // thay vì số 0 sai.
+  bool get hasCookTime => cookTimeMinutes > 0;
+  bool get hasServings => servings > 0;
+  bool get hasNutrition => calories > 0;
+  String get cookTimeLabel => hasCookTime ? '$cookTimeMinutes phút' : '— phút';
+  String get cookTimeShortLabel => hasCookTime ? '${cookTimeMinutes}p' : '—';
+  String get caloriesLabel => hasNutrition ? '$calories kcal' : '— kcal';
+  String get servingsLabel => hasServings ? '$servings người' : '— người';
+
   Recipe copyWith({
     bool? isFavorited,
     double? matchScore,
@@ -118,9 +129,12 @@ class Recipe {
       instructions: instructions,
       nutrition: nutrition,
       matchScore: matchScore ?? this.matchScore,
-      matchedIngredients: matchedIngredients.isNotEmpty ? matchedIngredients : this.matchedIngredients,
-      missingIngredients: missingIngredients.isNotEmpty ? missingIngredients : this.missingIngredients,
+      matchedIngredients: matchedIngredients.isNotEmpty
+          ? matchedIngredients
+          : this.matchedIngredients,
+      missingIngredients: missingIngredients.isNotEmpty
+          ? missingIngredients
+          : this.missingIngredients,
     );
   }
 }
-

@@ -22,6 +22,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("Database migrations executed successfully.");
 
     db::seed_database(&pool).await?;
+    db::seed_vietnamese_recipes(&pool).await?;
 
     let state = AppState::new(pool, config.clone());
     let app = create_app(state);

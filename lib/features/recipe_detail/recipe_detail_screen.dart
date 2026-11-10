@@ -15,6 +15,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/difficulty_stars.dart';
 import '../cooking_mode/cooking_mode_screen.dart';
@@ -31,10 +32,7 @@ import 'widgets/recipe_step_card.dart';
 class RecipeDetailScreen extends StatefulWidget {
   final int recipeId;
 
-  const RecipeDetailScreen({
-    super.key,
-    required this.recipeId,
-  });
+  const RecipeDetailScreen({super.key, required this.recipeId});
 
   @override
   State<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
@@ -122,8 +120,12 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     totalCount: recipe.ingredients.length,
                     checkedCount: _controller.checkedCount,
                     servings: _controller.servings,
-                    onDecrease: _controller.decreaseServings,
-                    onIncrease: _controller.increaseServings,
+                    onDecrease: _controller.canScale
+                        ? _controller.decreaseServings
+                        : null,
+                    onIncrease: _controller.canScale
+                        ? _controller.increaseServings
+                        : null,
                   ),
 
                   const SizedBox(height: 12),
@@ -153,7 +155,10 @@ class _RecipeDetailScreenState extends State<RecipeDetailScreen> {
                     children: [
                       const Text(
                         'Các bước thực hiện',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       DifficultyStars(difficulty: recipe.difficulty),
                     ],

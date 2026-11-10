@@ -211,9 +211,13 @@ class SuggestController extends ChangeNotifier {
       case SuggestSortMode.rating:
         list.sort((a, b) => b.averageRating.compareTo(a.averageRating));
       case SuggestSortMode.time:
-        list.sort((a, b) => a.cookTimeMinutes.compareTo(b.cookTimeMinutes));
+        // Món không rõ thời gian (0) xếp cuối.
+        list.sort((a, b) => (a.hasCookTime ? a.cookTimeMinutes : 1 << 30)
+            .compareTo(b.hasCookTime ? b.cookTimeMinutes : 1 << 30));
       case SuggestSortMode.calories:
-        list.sort((a, b) => a.calories.compareTo(b.calories));
+        // Món chưa có dữ liệu calo (0) xếp cuối.
+        list.sort((a, b) => (a.hasNutrition ? a.calories : 1 << 30)
+            .compareTo(b.hasNutrition ? b.calories : 1 << 30));
       case SuggestSortMode.match:
         // Ở chế độ tên món không có điểm khớp → giữ thứ tự gốc.
         if (isIngredientMode) {

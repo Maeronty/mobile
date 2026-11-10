@@ -16,7 +16,9 @@
 // =============================================================================
 
 import 'dart:async';
+
 import 'package:flutter/material.dart';
+
 import '../../core/widgets/mystery_plate_icon.dart';
 import '../surprise_me/surprise_me_screen.dart';
 import 'home_controller.dart';
@@ -79,9 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _openSurpriseMe() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const SurpriseMeScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const SurpriseMeScreen()),
     );
   }
 
@@ -91,10 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         titleSpacing: 16,
         title: const HomeBrandTitle(),
-        actions: const [
-          HomeThemeToggleButton(),
-          SizedBox(width: 8),
-        ],
+        actions: const [HomeThemeToggleButton(), SizedBox(width: 8)],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.only(bottom: 24),
@@ -122,7 +119,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
             HomeActionCard(
               gradientColors: const [Color(0xFF059669), Color(0xFF10B981)],
-              icon: const Icon(Icons.kitchen_rounded, color: Colors.white, size: 28),
+              icon: const Icon(
+                Icons.kitchen_rounded,
+                color: Colors.white,
+                size: 28,
+              ),
               title: 'Tủ lạnh hôm nay còn gì?',
               subtitle: 'Nhập nguyên liệu để Bếp Việt gợi ý món ngon tức thì',
               onTap: () => widget.onNavigateTab?.call(2), // Jump to Kitchen Bag
@@ -152,16 +153,19 @@ class _HomeScreenState extends State<HomeScreen> {
               title: _controller.isAllCategory
                   ? 'Món ăn thịnh hành'
                   : 'Món: ${_controller.selectedCategory}',
-              recipes: _controller.filteredRecipes,
+              recipes: _controller.visibleRecipes,
+              totalCount: _controller.filteredRecipes.length,
+              onShowMore: _controller.hasMore ? _controller.showMore : null,
               onFavoriteToggled: () => setState(() {}),
             ),
 
             const SizedBox(height: 28),
 
-            HomeFastRecipesSection(
-              recipes: _controller.fastRecipes,
-              onFavoriteToggled: () => setState(() {}),
-            ),
+            if (_controller.fastRecipes.isNotEmpty)
+              HomeFastRecipesSection(
+                recipes: _controller.fastRecipes,
+                onFavoriteToggled: () => setState(() {}),
+              ),
           ],
         ),
       ),

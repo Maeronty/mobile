@@ -10,18 +10,27 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/models/recipe.dart';
 import '../../../core/widgets/recipe_card.dart';
 
 class HomeTrendingSection extends StatelessWidget {
   final String title;
   final List<Recipe> recipes;
+
+  /// Tổng số món của danh mục (lưới chỉ hiện một phần).
+  final int totalCount;
+
+  /// null khi đã hiện hết → ẩn nút "Xem thêm".
+  final VoidCallback? onShowMore;
   final VoidCallback onFavoriteToggled;
 
   const HomeTrendingSection({
     super.key,
     required this.title,
     required this.recipes,
+    required this.totalCount,
+    this.onShowMore,
     required this.onFavoriteToggled,
   });
 
@@ -36,12 +45,18 @@ class HomeTrendingSection extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              Flexible(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
               Text(
-                '${recipes.length} món',
+                '$totalCount món',
                 style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
               ),
             ],
@@ -68,6 +83,17 @@ class HomeTrendingSection extends StatelessWidget {
             },
           ),
         ),
+        if (onShowMore != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: OutlinedButton(
+              onPressed: onShowMore,
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(44),
+              ),
+              child: Text('Xem thêm (${totalCount - recipes.length} món)'),
+            ),
+          ),
       ],
     );
   }
