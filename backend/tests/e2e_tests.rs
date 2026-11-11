@@ -177,64 +177,10 @@ async fn test_full_user_mobile_e2e_journey() {
     assert!(search_body.is_array());
 
     // =========================================================================
-    // STEP 7: Pantry / Kitchen Bag Management (R4)
+    // STEP 7: Chức năng Tủ lạnh (Pantry) đã bị gỡ → route không còn tồn tại
     // =========================================================================
-    // Add ingredients to pantry
-    let (status, add_ing_1) = send_request(
-        &app,
-        "POST",
-        "/api/pantry",
-        Some(&token),
-        Some(json!({
-            "ingredientName": "Thịt gà",
-            "quantity": 500.0,
-            "unit": "g"
-        })),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED, "Add pantry item should succeed: {add_ing_1}");
-
-    let (status, _) = send_request(
-        &app,
-        "POST",
-        "/api/pantry",
-        Some(&token),
-        Some(json!({
-            "ingredientName": "Nước mắm",
-            "quantity": 2.0,
-            "unit": "muỗng"
-        })),
-    )
-    .await;
-    assert_eq!(status, StatusCode::CREATED);
-
-    // Fetch pantry list
-    let (status, pantry_list) = send_request(
-        &app,
-        "GET",
-        "/api/pantry",
-        Some(&token),
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK);
-    let items = pantry_list["items"].as_array().expect("pantry items array");
-    assert_eq!(items.len(), 2);
-
-    let ingredient_names = pantry_list["ingredientNames"].as_array().unwrap();
-    assert!(ingredient_names.iter().any(|v| v.as_str() == Some("thịt gà") || v.as_str() == Some("Thịt gà")));
-
-    // Suggest recipes from pantry
-    let (status, suggest_body) = send_request(
-        &app,
-        "GET",
-        "/api/pantry/suggest",
-        Some(&token),
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK);
-    assert!(suggest_body.is_array());
+    let (status, _) = send_request(&app, "GET", "/api/pantry", Some(&token), None).await;
+    assert_eq!(status, StatusCode::NOT_FOUND, "Pantry API đã bị gỡ");
 
     // =========================================================================
     // STEP 8: Favorites Management (R3)
@@ -303,30 +249,7 @@ async fn test_full_user_mobile_e2e_journey() {
     assert_eq!(fav_untoggle["isFavorited"], false);
 
     // =========================================================================
-    // STEP 9: Clear Pantry (R4)
-    // =========================================================================
-    let (status, _) = send_request(
-        &app,
-        "DELETE",
-        "/api/pantry",
-        Some(&token),
-        None,
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK);
-
-    let (_, empty_pantry) = send_request(
-        &app,
-        "GET",
-        "/api/pantry",
-        Some(&token),
-        None,
-    )
-    .await;
-    assert_eq!(empty_pantry["items"].as_array().unwrap().len(), 0);
-
-    // =========================================================================
-    // STEP 10: Change Password & Re-authenticate (R1 Security)
+    // STEP 9: Change Password & Re-authenticate (R1 Security)
     // =========================================================================
     let (status, _) = send_request(
         &app,

@@ -33,19 +33,31 @@ class RecipeQuickStats extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          RecipeStatItem(
-            icon: Icons.timer_outlined,
-            value: recipe.cookTimeLabel,
-            label: 'Thời gian',
-          ),
-          Container(width: 1, height: 32, color: Colors.grey.withOpacity(0.2)),
-          RecipeStatItem(
-            icon: Icons.local_fire_department_outlined,
-            value: recipe.caloriesLabel,
-            label: 'Năng lượng',
-            iconColor: AppColors.accentOrange,
-          ),
-          Container(width: 1, height: 32, color: Colors.grey.withOpacity(0.2)),
+          // Không rõ thời gian nấu → ẩn hẳn ô này (không hiện "—").
+          if (recipe.cookTimeLabel case final time?) ...[
+            RecipeStatItem(
+              icon: Icons.timer_outlined,
+              value: time,
+              label: recipe.cookTimeEstimated
+                  ? 'Thời gian (ước tính)'
+                  : 'Thời gian',
+            ),
+            Container(
+              width: 1,
+              height: 32,
+              color: Colors.grey.withOpacity(0.2),
+            ),
+          ],
+          // Không rõ calo → ẩn hẳn ô này. Calo ước tính là cho CẢ MÓN.
+          if (recipe.caloriesLabel case final kcal?) ...[
+            RecipeStatItem(
+              icon: Icons.local_fire_department_outlined,
+              value: kcal,
+              label: recipe.caloriesEstimated ? 'Cả món (ước tính)' : 'Năng lượng',
+              iconColor: AppColors.accentOrange,
+            ),
+            Container(width: 1, height: 32, color: Colors.grey.withOpacity(0.2)),
+          ],
           RecipeStatItem(
             icon: Icons.star_rounded,
             value: recipe.totalRatings == 0

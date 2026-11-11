@@ -216,55 +216,63 @@ class RecipeCard extends StatelessWidget {
                       showLabel: false,
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.timer_outlined,
-                        size: 12,
-                        color: Theme.of(context).brightness == Brightness.dark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        recipe.cookTimeShortLabel,
-                        style: TextStyle(
-                          fontSize: 11,
+                  // Không rõ thời gian nấu → ẩn hẳn (không hiện "—").
+                  if (recipe.cookTimeShortLabel case final time?) ...[
+                    const SizedBox(width: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 12,
                           color: Theme.of(context).brightness == Brightness.dark
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondaryLight,
-                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 2),
+                        Text(
+                          time,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
               const SizedBox(height: 6),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.local_fire_department_rounded,
-                        size: 13,
-                        color: AppColors.accentOrange,
-                      ),
-                      const SizedBox(width: 2),
-                      Text(
-                        recipe.caloriesLabel,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                  // Không rõ calo → ẩn (giữ chỗ trống để phần bên phải không xô lệch).
+                  if (recipe.caloriesLabel case final kcal?)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 13,
                           color: AppColors.accentOrange,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 2),
+                        Text(
+                          kcal,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.accentOrange,
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    const SizedBox.shrink(),
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -381,38 +389,44 @@ class RecipeCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(
-                      Icons.timer_outlined,
-                      size: 13,
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      recipe.cookTimeLabel,
-                      style: TextStyle(
-                        fontSize: 11,
+                    // Không rõ thời gian nấu → ẩn hẳn (không hiện "—").
+                    if (recipe.cookTimeLabel case final time?) ...[
+                      Icon(
+                        Icons.timer_outlined,
+                        size: 13,
                         color: Theme.of(context).brightness == Brightness.dark
                             ? AppColors.textSecondaryDark
                             : AppColors.textSecondaryLight,
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 13,
-                      color: AppColors.accentOrange,
-                    ),
-                    const SizedBox(width: 3),
-                    Text(
-                      recipe.caloriesLabel,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: AppColors.accentOrange,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 3),
+                      Text(
+                        time,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondaryLight,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                    ],
+                    // Không rõ calo → ẩn hẳn.
+                    if (recipe.caloriesLabel case final kcal?) ...[
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 13,
+                        color: AppColors.accentOrange,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        kcal,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: AppColors.accentOrange,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ],

@@ -6,7 +6,8 @@
 //   Quản lý danh sách id các công thức người dùng đã thả tim.
 //
 // FLOW
-//   1. Khởi tạo với vài món yêu thích mẫu (id 1, 2, 4, 8).
+//   1. Khởi tạo: nạp id từ SharedPreferences; đăng nhập → `syncWithServer`
+//      (đẩy id local lên, kéo danh sách server về). Đăng xuất → `clear`.
 //   2. Người dùng bấm icon trái tim trên RecipeCard hoặc màn Chi tiết
 //      → `toggleFavorite(recipeId)`:
 //        - Đã có trong danh sách  → xoá (bỏ thích).
@@ -20,17 +21,25 @@
 // =============================================================================
 
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../core/data/api_client.dart';
 import '../../core/data/recipe_repository.dart';
 import '../../core/models/recipe.dart';
 
 class FavoritesController extends ChangeNotifier {
+  static const String _storageKey = 'favorite_recipe_ids';
+
   /// Singleton: danh sách yêu thích dùng chung giữa các màn hình.
   static final FavoritesController instance = FavoritesController._();
 
-  FavoritesController._();
+  FavoritesController._() {
+    _ready = _loadFromLocal();
+  }
 
-  /// Id các món yêu thích mặc định khi mở app (dữ liệu demo).
+  /// Hoàn tất khi đã nạp xong dữ liệu local — mọi thao tác đồng bộ phải chờ.
+  late final Future<void> _ready;
+
   final Set<int> _favoriteIds = {};
 
   /// Bản chỉ đọc của tập id yêu thích.
@@ -46,13 +55,111 @@ class FavoritesController extends ChangeNotifier {
         .toList();
   }
 
+  /// Chờ nạp local xong rồi đồng bộ server (nếu đã đăng nhập).
+  Future<void> init() async {
+    await _ready;
+    await syncWithServer();
+  }
+
+  Future<void> _loadFromLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_storageKey);
+      if (list != null && list.isNotEmpty) {
+        _favoriteIds.addAll(
+          list.map((e) => int.tryParse(e) ?? 0).where((id) => id > 0),
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('FavoritesController._loadFromLocal error: $e');
+    }
+  }
+
+  Future<void> _saveToLocal() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(
+        _storageKey,
+        _favoriteIds.map((e) => e.toString()).toList(),
+      );
+    } catch (e) {
+      debugPrint('FavoritesController._saveToLocal error: $e');
+    }
+  }
+
   /// Thả tim / bỏ thả tim cho công thức [recipeId].
-  void toggleFavorite(int recipeId) {
+  Future<void> toggleFavorite(int recipeId) async {
     if (_favoriteIds.contains(recipeId)) {
       _favoriteIds.remove(recipeId);
     } else {
       _favoriteIds.add(recipeId);
     }
+    notifyListeners();
+    await _saveToLocal();
+
+    // Đã đăng nhập → đồng bộ backend. API là "toggle mù" nên đối chiếu
+    // `isFavorited` trả về với ý định local; lệch thì toggle lại 1 lần.
+    if (ApiClient.instance.token != null) {
+      final wantFavorited = _favoriteIds.contains(recipeId);
+      try {
+        final res = await ApiClient.instance.post(
+          '/api/Recipes/$recipeId/favorite',
+          {},
+          timeout: const Duration(seconds: 4),
+        );
+        if (res is Map && res['isFavorited'] is bool && res['isFavorited'] != wantFavorited) {
+          await ApiClient.instance.post(
+            '/api/Recipes/$recipeId/favorite',
+            {},
+            timeout: const Duration(seconds: 4),
+          );
+        }
+      } catch (e) {
+        debugPrint('FavoritesController: đồng bộ server lỗi ($e)');
+      }
+    }
+  }
+
+  /// Đồng bộ 2 chiều với server (nếu đã đăng nhập):
+  ///   1. Đẩy các id local (thả tim lúc chưa đăng nhập) lên `sync-favorites`.
+  ///   2. Kéo danh sách server về làm nguồn chuẩn (server ⊇ local sau bước 1).
+  Future<void> syncWithServer() async {
+    await _ready;
+    if (ApiClient.instance.token == null) return;
+    try {
+      if (_favoriteIds.isNotEmpty) {
+        await ApiClient.instance.post(
+          '/api/Recipes/sync-favorites',
+          {'recipeIds': _favoriteIds.toList()},
+          timeout: const Duration(seconds: 4),
+        );
+      }
+      final data = await ApiClient.instance.get(
+        '/api/Recipes/favorites',
+        timeout: const Duration(seconds: 4),
+      );
+      if (data is List) {
+        final serverIds = <int>{
+          for (final item in data)
+            if (item is Map && item['id'] is int) item['id'] as int,
+        };
+        _favoriteIds
+          ..clear()
+          ..addAll(serverIds);
+        await _saveToLocal();
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint('FavoritesController.syncWithServer error: $e');
+    }
+  }
+
+  /// Xoá dữ liệu yêu thích.
+  Future<void> clear() async {
+    await _ready;
+    _favoriteIds.clear();
+    await _saveToLocal();
     notifyListeners();
   }
 }

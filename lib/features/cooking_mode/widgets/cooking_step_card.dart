@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // VAI TRÒ
-//   Ghép nhãn bước, nội dung hướng dẫn, mẹo đầu bếp (nếu có) và đồng hồ `timer`.
+//   Ghép nhãn bước, nội dung hướng dẫn và mẹo đầu bếp (nếu có).
 // =============================================================================
 
 import 'package:flutter/material.dart';
@@ -15,14 +15,10 @@ class CookingStepCard extends StatelessWidget {
   final int stepNumber;
   final InstructionStep step;
 
-  /// Đồng hồ đếm ngược hiển thị cuối thẻ.
-  final Widget timer;
-
   const CookingStepCard({
     super.key,
     required this.stepNumber,
     required this.step,
-    required this.timer,
   });
 
   @override
@@ -73,10 +69,6 @@ class CookingStepCard extends StatelessWidget {
             const SizedBox(height: 24),
             CookingChefTip(tip: step.tip!),
           ],
-
-          const SizedBox(height: 32),
-
-          timer,
         ],
       ),
     );

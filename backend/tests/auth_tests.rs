@@ -466,7 +466,7 @@ async fn test_10_changing_password_and_login_verification() {
 }
 
 #[tokio::test]
-async fn test_11_upgrading_to_vip() {
+async fn test_11_vip_upgrade_removed() {
     let (app, _pool) = setup_test_app().await;
 
     let reg_payload = json!({
@@ -478,8 +478,8 @@ async fn test_11_upgrading_to_vip() {
         send_request(&app, "POST", "/api/Account/register", None, Some(reg_payload)).await;
     let token = reg_body["token"].as_str().unwrap();
 
-    // Call upgrade to VIP
-    let (status_vip, body_vip) = send_request(
+    // Chức năng VIP đã được gỡ → route nâng cấp không còn, vai trò giữ nguyên.
+    let (status_vip, _) = send_request(
         &app,
         "POST",
         "/api/Account/upgrade-to-vip",
@@ -487,14 +487,12 @@ async fn test_11_upgrading_to_vip() {
         None,
     )
     .await;
-    assert_eq!(status_vip, StatusCode::OK);
-    assert_eq!(body_vip["role"], "VIP");
+    assert_eq!(status_vip, StatusCode::NOT_FOUND);
 
-    // Verify role in profile
     let (status_prof, body_prof) =
         send_request(&app, "GET", "/api/Account/profile", Some(token), None).await;
     assert_eq!(status_prof, StatusCode::OK);
-    assert_eq!(body_prof["role"], "VIP");
+    assert_eq!(body_prof["role"], "User");
 }
 
 #[tokio::test]

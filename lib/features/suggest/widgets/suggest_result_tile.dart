@@ -34,7 +34,7 @@ class SuggestResultTile extends StatelessWidget {
           isHorizontal: true,
           onFavoriteToggled: onFavoriteToggled,
         ),
-        // Show matched & missing ingredients detail if in fridge mode
+        // Show matched & missing ingredients detail if in ingredient mode
         if (isIngredientMode && recipe.matchScore != null)
           Padding(
             padding: const EdgeInsets.only(top: 6, left: 8, right: 8),

@@ -1,29 +1,31 @@
 // =============================================================================
-// FEATURE: TRANG CHỦ — KHÁM PHÁ MÓN (danh sách vô hạn có phân trang)
+// FEATURE: TRANG CHỦ — KHÁM PHÁ MÓN (xem trước + "Xem tất cả")
 // =============================================================================
 //
 // VAI TRÒ
-//   Toàn bộ dữ liệu + logic của Home: banner nổi bật, danh mục, lưới món tải
-//   từng trang khi cuộn. HomeScreen chỉ hiển thị và gọi các hàm ở đây.
+//   Toàn bộ dữ liệu + logic của Home: banner nổi bật, danh mục, lưới XEM TRƯỚC
+//   `previewSize` món của danh mục đang chọn. Danh sách đầy đủ có phân trang
+//   nằm ở màn "Xem tất cả" (features/recipe_list). HomeScreen chỉ hiển thị và
+//   gọi các hàm ở đây.
 //
 // FLOW KHỞI TẠO (`init`)
-//   1. Cùng lúc gọi: banner (`featured`), danh mục (`categories`), trang 1.
-//   2. Server lỗi ở trang 1 → chuyển sang nguồn dự phòng (dữ liệu đóng gói
-//      trong app, cùng cách phân trang), `isOffline = true` để UI báo nhẹ.
-//
-// FLOW CUỘN VÔ HẠN (`loadMore`)
-//   1. HomeScreen gọi khi còn < ~1 màn hình nữa là chạm cuối danh sách.
-//   2. Bỏ qua nếu đang tải / đã hết / đang lỗi (chờ người dùng bấm thử lại).
-//   3. Tải trang kế, nối vào `items`, bỏ món trùng id (phòng dữ liệu đổi giữa
-//      các lần gọi).
+//   1. Cùng lúc gọi: banner (`featured`), danh mục (`categories`), xem trước
+//      (trang 1, `previewSize` món — server trả kèm `total`).
+//   2. Server lỗi → chuyển sang nguồn dự phòng (dữ liệu đóng gói trong app,
+//      cùng cách phân trang), `isOffline = true` để UI báo nhẹ.
 //
 // ĐỔI DANH MỤC (`selectCategory`) / KÉO ĐỂ LÀM MỚI (`refresh`)
-//   Xoá danh sách, tăng `_generation` rồi tải lại trang 1. Response của lần gọi
-//   cũ về muộn (người dùng bấm chip liên tục) bị bỏ qua nhờ so `_generation`.
+//   Xoá lưới, tăng `_generation` rồi tải lại phần xem trước. Response của lần
+//   gọi cũ về muộn (người dùng bấm chip liên tục) bị bỏ qua nhờ so `_generation`.
+//
+// "XEM TẤT CẢ" (`openAllController`)
+//   Hiện khi `hasMoreThanPreview`. Tạo RecipeListController cho danh mục đang
+//   chọn, dùng CHUNG nguồn dữ liệu hiện tại (đang ngoại tuyến thì màn kia cũng
+//   dùng dữ liệu có sẵn, không chờ server lỗi lần nữa).
 //
 // HIỆU ỨNG XUẤT HIỆN
 //   `shouldAnimate(id)` trả true đúng MỘT lần cho mỗi món → thẻ chỉ trượt vào
-//   lần đầu xuất hiện, cuộn lên xuống không nhấp nháy lại.
+//   lần đầu xuất hiện.
 // =============================================================================
 
 import 'package:flutter/foundation.dart';
@@ -31,9 +33,11 @@ import 'package:flutter/foundation.dart';
 import '../../core/data/api_client.dart';
 import '../../core/data/recipe_feed_source.dart';
 import '../../core/models/recipe_summary.dart';
+import '../recipe_list/recipe_list_controller.dart';
 
 class HomeController extends ChangeNotifier {
-  static const int pageSize = 20;
+  /// Số món xem trước ở Home (chẵn để lưới 2 cột không hụt ô).
+  static const int previewSize = 10;
   static const Duration bannerInterval = Duration(seconds: 5);
 
   HomeController({RecipeFeedSource? source, RecipeFeedSource? fallback})
@@ -50,12 +54,9 @@ class HomeController extends ChangeNotifier {
   List<RecipeSummary> _featured = [];
   List<CategoryCount> _categories = [];
   String? _selectedCategory;
-  final List<RecipeSummary> _items = [];
-  final Set<int> _itemIds = {};
+  List<RecipeSummary> _items = [];
   final Set<int> _animated = {};
-  int _page = 0;
   int _total = 0;
-  bool _hasMore = true;
   bool _loading = false;
   bool _isOffline = false;
   String? _error;
@@ -65,13 +66,18 @@ class HomeController extends ChangeNotifier {
   List<RecipeSummary> get featured => _featured;
   List<CategoryCount> get categories => _categories;
   String? get selectedCategory => _selectedCategory;
+
+  /// Các món xem trước (tối đa `previewSize`).
   List<RecipeSummary> get items => _items;
+
+  /// Tổng số món của danh mục đang chọn (từ server).
   int get total => _total;
-  bool get hasMore => _hasMore;
   bool get isLoading => _loading;
-  bool get isFirstLoad => _loading && _items.isEmpty;
   bool get isOffline => _isOffline;
   String? get error => _error;
+
+  /// Còn món ngoài phần xem trước → hiện nút "Xem tất cả".
+  bool get hasMoreThanPreview => _total > _items.length;
 
   /// Tổng số món của tất cả danh mục (cho chip "Tất cả").
   int get allCount => _categories.fold(0, (sum, c) => sum + c.count);
@@ -80,7 +86,7 @@ class HomeController extends ChangeNotifier {
   String get sectionTitle => _selectedCategory ?? 'Tất cả món';
 
   Future<void> init() async {
-    await Future.wait([_loadFirstPage(), _loadMeta()]);
+    await Future.wait([_loadPreview(), _loadMeta()]);
   }
 
   Future<void> _loadMeta() async {
@@ -100,31 +106,19 @@ class HomeController extends ChangeNotifier {
     _notify();
   }
 
-  Future<void> _loadFirstPage() async {
-    _items.clear();
-    _itemIds.clear();
-    _page = 0;
-    _total = 0;
-    _hasMore = true;
-    _error = null;
-    await loadMore();
-  }
-
-  Future<void> loadMore() async {
-    if (_loading || !_hasMore || _error != null) return;
+  Future<void> _loadPreview() async {
     final generation = _generation;
+    _items = [];
+    _total = 0;
+    _error = null;
     _loading = true;
     _notify();
 
     try {
-      final page = await _fetch(_page + 1);
+      final page = await _fetchPreview();
       if (generation != _generation) return; // đã đổi danh mục trong lúc chờ
-      for (final item in page.items) {
-        if (_itemIds.add(item.id)) _items.add(item);
-      }
-      _page = page.page;
+      _items = page.items;
       _total = page.total;
-      _hasMore = page.hasMore;
     } catch (e) {
       if (generation != _generation) return;
       _error = e is ApiException ? e.message : 'Không tải được danh sách món.';
@@ -136,41 +130,45 @@ class HomeController extends ChangeNotifier {
     }
   }
 
-  /// Lấy 1 trang; trang đầu mà server lỗi → chuyển hẳn sang nguồn dự phòng.
-  Future<RecipePage> _fetch(int page) async {
+  /// Lấy phần xem trước; server lỗi → chuyển hẳn sang nguồn dự phòng.
+  Future<RecipePage> _fetchPreview() async {
     try {
-      return await _source.page(page: page, pageSize: pageSize, category: _selectedCategory);
+      return await _source.page(page: 1, pageSize: previewSize, category: _selectedCategory);
     } catch (e) {
-      if (page != 1 || identical(_source, _fallback)) rethrow;
+      if (identical(_source, _fallback)) rethrow;
       debugPrint('HomeController: server lỗi, dùng dữ liệu ngoại tuyến ($e)');
       _source = _fallback;
       _isOffline = true;
-      return _source.page(page: page, pageSize: pageSize, category: _selectedCategory);
+      return _source.page(page: 1, pageSize: previewSize, category: _selectedCategory);
     }
   }
 
   /// Bấm "Thử lại" sau lỗi.
   Future<void> retry() {
-    _error = null;
-    return loadMore();
+    _generation++;
+    return _loadPreview();
   }
 
   Future<void> selectCategory(String? category) async {
     if (category == _selectedCategory) return;
     _selectedCategory = category;
     _generation++;
-    _loading = false;
-    _notify();
-    await _loadFirstPage();
+    await _loadPreview();
   }
 
   Future<void> refresh() async {
     _generation++;
-    _loading = false;
     _source = _primary; // thử lại server
     _isOffline = false;
-    await Future.wait([_loadFirstPage(), _loadMeta()]);
+    await Future.wait([_loadPreview(), _loadMeta()]);
   }
+
+  /// Controller cho màn "Xem tất cả" của danh mục đang chọn.
+  RecipeListController openAllController() => RecipeListController(
+        source: _source,
+        fallback: _fallback,
+        category: _selectedCategory,
+      );
 
   bool shouldAnimate(int id) => _animated.add(id);
 

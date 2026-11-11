@@ -61,7 +61,7 @@ async fn card_has_only_light_fields() {
     let item = &body["items"][0];
     let mut keys: Vec<&str> = item.as_object().unwrap().keys().map(String::as_str).collect();
     keys.sort();
-    assert_eq!(keys, ["calories", "category", "cookTimeMinutes", "id", "image", "ingredientCount", "source", "title"]);
+    assert_eq!(keys, ["calories", "caloriesEstimated", "category", "cookTimeEstimated", "cookTimeMinutes", "id", "image", "ingredientCount", "source", "title"]);
     assert!(item["ingredientCount"].as_i64().unwrap() > 0);
 }
 

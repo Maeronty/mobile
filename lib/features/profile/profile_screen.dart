@@ -3,16 +3,14 @@
 // =============================================================================
 //
 // FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng khu vực nằm trong `widgets/`.
-//   - Thông tin người dùng, chế độ ăn, thông báo → `profile_controller.dart`.
+//   - Thông tin người dùng, thông báo           → `profile_controller.dart`.
 //   - Số món đã lưu                             → FavoritesController.
 //   - Dark Mode                                 → ThemeController.
 //
 // FLOW UI
 //   1. initState → lắng nghe ProfileController & FavoritesController để tự
 //      build lại khi tuỳ chọn hoặc số món yêu thích thay đổi.
-//   2. Bấm thẻ nâng cấp → mở PricingScreen.
-//   3. "Chế độ ăn uống" → `_showDietPreferenceDialog` → setDietPreference.
-//   4. Công tắc Thông báo / Dark Mode → controller tương ứng.
+//   2. Công tắc Thông báo / Dark Mode → controller tương ứng.
 //
 // LƯU Ý
 //   `isDark` lấy từ `Theme.of(context)` để màn hình phụ thuộc vào Theme và tự
@@ -22,13 +20,10 @@
 import 'package:flutter/material.dart';
 import '../favorites/favorites_controller.dart';
 import '../theme/theme_controller.dart';
-import 'pricing_screen.dart';
 import 'profile_controller.dart';
-import 'widgets/diet_preference_dialog.dart';
 import 'widgets/profile_header_card.dart';
 import 'widgets/profile_help_card.dart';
 import 'widgets/profile_logout_button.dart';
-import 'widgets/profile_membership_banner.dart';
 import 'widgets/profile_preferences_card.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -58,23 +53,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   void _onChanged() => setState(() {});
 
-  void _openPricing() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const PricingScreen()),
-    );
-  }
-
-  void _showDietPreferenceDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => DietPreferenceDialog(
-        options: ProfileController.dietOptions,
-        onSelected: _profile.setDietPreference,
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = ThemeController.instance;
@@ -99,17 +77,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               savedCount: _favorites.favoriteIds.length,
             ),
 
-            const SizedBox(height: 16),
-
-            ProfileMembershipBanner(onTap: _openPricing),
-
             const SizedBox(height: 20),
 
             ProfilePreferencesCard(
-              dietPreference: _profile.dietPreference,
               notificationEnabled: _profile.notificationEnabled,
               isDarkMode: isDark,
-              onDietTap: _showDietPreferenceDialog,
               onNotificationChanged: _profile.setNotificationEnabled,
               onDarkModeToggle: theme.toggleTheme,
             ),

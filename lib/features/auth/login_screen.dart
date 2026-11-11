@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         const AuthHeader(
                           title: 'Chào mừng trở lại',
-                          subtitle: 'Đăng nhập để lưu món yêu thích, tủ lạnh và dùng gợi ý AI.',
+                          subtitle: 'Đăng nhập để lưu món yêu thích và nhận diện nguyên liệu từ ảnh.',
                         ),
                         const SizedBox(height: 28),
                         if (_auth.errorMessage != null) ...[

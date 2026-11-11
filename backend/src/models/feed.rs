@@ -29,8 +29,12 @@ pub struct RecipeCardDto {
     pub source: String,
     /// 0 = không rõ.
     pub cook_time_minutes: i64,
+    /// true = thời gian nấu là ước lượng (app hiện "~").
+    pub cook_time_estimated: bool,
     /// 0 = chưa có dữ liệu dinh dưỡng.
     pub calories: i64,
+    /// true = calo ước tính từ nguyên liệu cho cả món (app hiện "~").
+    pub calories_estimated: bool,
     pub ingredient_count: i64,
 }
 

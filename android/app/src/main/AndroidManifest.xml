@@ -42,5 +42,10 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Giọng đọc hướng dẫn nấu (flutter_tts): Android 11+ cần khai báo để
+             thấy được dịch vụ Text-to-Speech của máy. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
     </queries>
 </manifest>

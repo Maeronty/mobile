@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng khu vực nằm trong `widgets/`.
-// Logic tải, khẩu phần & checklist nằm trong `recipe_detail_controller.dart`;
+// Logic tải & checklist nằm trong `recipe_detail_controller.dart`;
 // trạng thái yêu thích nằm trong FavoritesController.
 //
 // FLOW UI
@@ -13,7 +13,7 @@
 //      Lỗi → thông báo + "Thử lại".
 //   3. Tải xong → các khu vực (thông số, dinh dưỡng, nguyên liệu, các bước)
 //      mờ dần trượt lên lần lượt.
-//   4. Bấm [−]/[+] đổi khẩu phần; chạm dòng nguyên liệu để tick.
+//   4. Chạm dòng nguyên liệu để tick đã chuẩn bị.
 //   5. Nút dưới cùng → mở CookingModeScreen(recipe).
 //
 // LƯU Ý
@@ -33,6 +33,7 @@ import '../cooking_mode/cooking_mode_screen.dart';
 import '../favorites/favorites_controller.dart';
 import 'recipe_detail_controller.dart';
 import 'widgets/recipe_detail_app_bar.dart';
+import 'widgets/recipe_ingredient_group_label.dart';
 import 'widgets/recipe_ingredient_tile.dart';
 import 'widgets/recipe_ingredients_header.dart';
 import 'widgets/recipe_nutrition_section.dart';
@@ -154,23 +155,25 @@ class _Body extends StatelessWidget {
             ),
           )),
           const SizedBox(height: 22),
-          section(RecipeNutritionSection(nutrition: recipe.nutrition, formatGrams: controller.formatScaledGrams)),
+          section(RecipeNutritionSection(nutrition: recipe.nutrition, formatGrams: controller.formatGrams)),
           const SizedBox(height: 26),
           section(RecipeIngredientsHeader(
             totalCount: recipe.ingredients.length,
             checkedCount: controller.checkedCount,
-            servings: controller.servings,
-            onDecrease: controller.canScale ? controller.decreaseServings : null,
-            onIncrease: controller.canScale ? controller.increaseServings : null,
           )),
           const SizedBox(height: 8),
           section(Column(
             children: [
               for (var i = 0; i < recipe.ingredients.length; i++) ...[
-                if (i > 0) Divider(height: 1, color: dark ? AppColors.dividerDark : AppColors.dividerLight),
+                // Sang nhóm phụ mới ("Gia vị", "Ăn kèm"...) → tiêu đề nhóm thay cho vạch chia.
+                if (recipe.ingredients[i].group != null &&
+                    recipe.ingredients[i].group != (i > 0 ? recipe.ingredients[i - 1].group : null))
+                  RecipeIngredientGroupLabel(label: recipe.ingredients[i].group!)
+                else if (i > 0)
+                  Divider(height: 1, color: dark ? AppColors.dividerDark : AppColors.dividerLight),
                 RecipeIngredientTile(
                   item: recipe.ingredients[i],
-                  amountText: controller.formatScaledAmount(recipe.ingredients[i].amount),
+                  amountText: controller.formatAmount(recipe.ingredients[i].amount),
                   isChecked: controller.isIngredientChecked(i),
                   onTap: () => controller.toggleIngredientCheck(i),
                 ),

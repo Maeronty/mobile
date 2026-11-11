@@ -58,14 +58,6 @@ pub fn create_app(state: AppState) -> Router {
             "/api/account/change-password",
             post(handlers::auth::change_password),
         )
-        .route(
-            "/api/Account/upgrade-to-vip",
-            post(handlers::auth::upgrade_to_vip),
-        )
-        .route(
-            "/api/account/upgrade-to-vip",
-            post(handlers::auth::upgrade_to_vip),
-        )
         // Recipe & Catalog routes
         .route("/catalog", get(handlers::recipe::get_catalog))
         .route("/api/catalog", get(handlers::recipe::get_catalog))
@@ -129,70 +121,6 @@ pub fn create_app(state: AppState) -> Router {
             post(handlers::ai::recognize).layer(DefaultBodyLimit::max(5 * 1024 * 1024)),
         )
         .route("/api/Ai/suggest", post(handlers::ai::suggest))
-        // Pantry & Kitchen Bag routes (Milestone M5)
-        .route(
-            "/api/pantry",
-            get(handlers::pantry::get_pantry)
-                .post(handlers::pantry::add_pantry_item)
-                .delete(handlers::pantry::delete_or_clear_pantry),
-        )
-        .route(
-            "/api/Pantry",
-            get(handlers::pantry::get_pantry)
-                .post(handlers::pantry::add_pantry_item)
-                .delete(handlers::pantry::delete_or_clear_pantry),
-        )
-        .route(
-            "/api/kitchen-bag",
-            get(handlers::pantry::get_pantry)
-                .post(handlers::pantry::add_pantry_item)
-                .delete(handlers::pantry::delete_or_clear_pantry),
-        )
-        .route(
-            "/api/KitchenBag",
-            get(handlers::pantry::get_pantry)
-                .post(handlers::pantry::add_pantry_item)
-                .delete(handlers::pantry::delete_or_clear_pantry),
-        )
-        .route(
-            "/api/kitchenbag",
-            get(handlers::pantry::get_pantry)
-                .post(handlers::pantry::add_pantry_item)
-                .delete(handlers::pantry::delete_or_clear_pantry),
-        )
-        .route(
-            "/api/pantry/:id",
-            put(handlers::pantry::update_pantry_item)
-                .delete(handlers::pantry::delete_pantry_item_by_id),
-        )
-        .route(
-            "/api/Pantry/:id",
-            put(handlers::pantry::update_pantry_item)
-                .delete(handlers::pantry::delete_pantry_item_by_id),
-        )
-        .route(
-            "/api/kitchen-bag/:id",
-            put(handlers::pantry::update_pantry_item)
-                .delete(handlers::pantry::delete_pantry_item_by_id),
-        )
-        .route(
-            "/api/KitchenBag/:id",
-            put(handlers::pantry::update_pantry_item)
-                .delete(handlers::pantry::delete_pantry_item_by_id),
-        )
-        .route(
-            "/api/kitchenbag/:id",
-            put(handlers::pantry::update_pantry_item)
-                .delete(handlers::pantry::delete_pantry_item_by_id),
-        )
-        .route(
-            "/api/pantry/suggest",
-            get(handlers::pantry::suggest_from_pantry),
-        )
-        .route(
-            "/api/kitchen-bag/suggest",
-            get(handlers::pantry::suggest_from_pantry),
-        )
         .layer(cors)
         .layer(TraceLayer::new_for_http())
         .with_state(state)

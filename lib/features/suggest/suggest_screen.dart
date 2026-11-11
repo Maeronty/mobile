@@ -10,7 +10,7 @@
 //   1. initState → tạo SuggestController (nạp nguyên liệu ban đầu) và lắng nghe
 //      controller: mỗi lần controller `notifyListeners()` → `setState` build lại.
 //   2. AppBar ▸ nút sắp xếp → `setSortMode(...)`.
-//   3. Thanh chọn chế độ: "Theo Tủ Lạnh" | "Tìm Theo Tên Món" → `setSearchMode`.
+//   3. Thanh chọn chế độ: "Theo Nguyên Liệu" | "Tìm Theo Tên Món" → `setSearchMode`.
 //   4. Chế độ tên món   : gõ chữ → `setState` → `results(query)` lọc lại ngay.
 //      Chế độ nguyên liệu: nhập/ chạm chip gợi ý → add/remove nguyên liệu.
 //   5. Danh sách kết quả: RecipeCard + dòng "Đã có / Thiếu" (chế độ nguyên liệu).
