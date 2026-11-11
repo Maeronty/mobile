@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // VAI TRÒ
-//   Hiển thị ảnh đại diện, tên, vai trò, giới thiệu và 3 chỉ số thống kê.
+//   Hiển thị ảnh đại diện, tên, giới thiệu và 3 chỉ số thống kê.
 //
 // LƯU Ý
 //   `savedCount` lấy từ FavoritesController, không dùng `savedRecipesCount` của
@@ -46,37 +46,9 @@ class ProfileHeaderCard extends StatelessWidget {
             child: const Icon(Icons.person_rounded, size: 40, color: AppColors.primaryDark),
           ),
           const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                user.name,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.amber.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.amber.withOpacity(0.4)),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.workspace_premium_rounded, size: 14, color: Colors.amber),
-                    const SizedBox(width: 4),
-                    Text(
-                      user.role,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.amber,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            user.name,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           Text(

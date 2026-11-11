@@ -22,9 +22,8 @@ void main() {
 
     final pho = recipes.firstWhere((r) => r.title.contains('Phở'));
     expect(pho.hasNutrition, isFalse);
-    expect(pho.caloriesLabel, '— kcal');
-    expect(pho.cookTimeLabel, '— phút');
-    expect(pho.servingsLabel, '— người');
+    expect(pho.caloriesLabel, isNull, reason: 'file đóng gói chưa có calo ước tính → ẩn'); 
+    expect(pho.cookTimeLabel, isNull, reason: 'không rõ thời gian → ẩn, không hiện "— phút"');
     expect(pho.description, 'Nguồn: Món Ngon Mỗi Ngày');
     expect(pho.ingredients, isNotEmpty);
     expect(pho.instructions, isNotEmpty);
@@ -59,7 +58,7 @@ void main() {
     expect((await local.categories()).last.name, 'Món khác');
   });
 
-  test('chi tiết không gọi được server → lấy từ dữ liệu có sẵn; món không rõ khẩu phần không nhân định lượng', () async {
+  test('chi tiết không gọi được server → lấy từ dữ liệu có sẵn; định lượng giữ như gốc', () async {
     await RecipeRepository.instance.load(online: false);
     final viet = RecipeRepository.instance.all.firstWhere((r) => r.ingredients.any((i) => i.amount == 0));
     final offlineApi = ApiClient(baseUrl: 'http://test', client: MockClient((_) async => http.Response('', 500)));
@@ -68,11 +67,9 @@ void main() {
       await Future<void>.delayed(Duration.zero);
     }
     expect(c.recipe?.id, viet.id);
-    expect(c.canScale, isFalse);
-    c.increaseServings();
-    expect(c.scaleFactor, 1);
-    expect(c.formatScaledAmount(0), '');
-    expect(c.formatScaledAmount(150), '150');
+    expect(c.formatAmount(0), '');
+    expect(c.formatAmount(150), '150');
+    expect(c.formatAmount(1.5), '1.5');
     c.dispose();
   });
 }

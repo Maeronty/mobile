@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // FLOW
-//   Chạm "Theo Tủ Lạnh" / "Tìm Theo Tên Món" → `onModeSelected(mode)`
+//   Chạm "Theo Nguyên Liệu" / "Tìm Theo Tên Món" → `onModeSelected(mode)`
 //   → SuggestController.setSearchMode → màn hình đổi ô nhập tương ứng.
 // =============================================================================
 
@@ -40,7 +40,7 @@ class SuggestModeTabs extends StatelessWidget {
           children: [
             _ModeTab(
               icon: Icons.kitchen_rounded,
-              label: 'Theo Tủ Lạnh',
+              label: 'Theo Nguyên Liệu',
               isActive: isIngredientMode,
               onTap: () => onModeSelected(SuggestSearchMode.byIngredients),
             ),

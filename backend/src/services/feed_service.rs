@@ -32,8 +32,9 @@ const FEATURED_CATEGORIES: &[&str] = &["Bún, Phở & Mì", "Canh", "Món kho", 
 
 const CARD_SELECT: &str = r#"
     SELECT r.id, r.title, COALESCE(r.image_url, '') AS image, r.category,
-           COALESCE(r.source, '') AS source, r.cook_time_minutes,
-           CAST(ROUND(COALESCE(n.calories, 0)) AS INTEGER) AS calories,
+           COALESCE(r.source, '') AS source, r.cook_time_minutes, r.cook_time_estimated,
+           CAST(ROUND(COALESCE(n.calories, r.estimated_calories)) AS INTEGER) AS calories,
+           (n.recipe_id IS NULL AND r.estimated_calories > 0) AS calories_estimated,
            (SELECT COUNT(*) FROM recipe_ingredients i WHERE i.recipe_id = r.id) AS ingredient_count
     FROM recipes r
     LEFT JOIN recipe_nutritions n ON n.recipe_id = r.id

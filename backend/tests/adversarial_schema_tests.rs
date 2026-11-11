@@ -1,4 +1,4 @@
-#[allow(dead_code)]
+﻿#[allow(dead_code)]
 mod common;
 
 use common::setup_test_pool;
@@ -513,15 +513,15 @@ async fn test_adversarial_migration_idempotence_replay() {
         );
     }
 
-    // Verify _sqlx_migrations has exactly 1 applied version
+    // Verify _sqlx_migrations has exactly 3 applied versions (0001 init, 0002 cook_time_estimated, 0003 estimated_calories)
     let migration_count: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM _sqlx_migrations")
         .fetch_one(&pool)
         .await
         .expect("Failed to read _sqlx_migrations");
 
     assert_eq!(
-        migration_count.0, 1,
-        "Only 1 migration file should be recorded in _sqlx_migrations, got {}",
+        migration_count.0, 3,
+        "Exactly 3 migration files should be recorded in _sqlx_migrations, got {}",
         migration_count.0
     );
 

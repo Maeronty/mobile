@@ -4,7 +4,6 @@ pub mod favorite;
 pub mod feed;
 pub mod health;
 pub mod image;
-pub mod pantry;
 pub mod recipe;
 
 pub use health::health_check;

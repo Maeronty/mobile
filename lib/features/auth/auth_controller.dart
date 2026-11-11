@@ -39,6 +39,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/data/api_client.dart';
 import '../../core/models/auth_user.dart';
+import '../favorites/favorites_controller.dart';
 
 class AuthController extends ChangeNotifier {
   static const _tokenKey = 'auth.token';
@@ -111,6 +112,7 @@ class AuthController extends ChangeNotifier {
       if (token != null && userJson != null) {
         _api.token = token;
         _user = AuthUser.fromJson(jsonDecode(userJson) as Map<String, dynamic>);
+        FavoritesController.instance.syncWithServer();
         try {
           await _api.get(
             '/api/Account/profile',
@@ -194,6 +196,7 @@ class AuthController extends ChangeNotifier {
       _user = AuthUser.fromJson(data);
       _isGuest = false;
       _api.token = token;
+      FavoritesController.instance.syncWithServer();
       if (remember) await _saveSession(token, _user!);
       return true;
     } on ApiException catch (e) {
@@ -222,6 +225,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _clearSession() async {
     _user = null;
     _api.token = null;
+    FavoritesController.instance.clear();
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_tokenKey);

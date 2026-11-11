@@ -94,7 +94,6 @@ flutter run --dart-define=FOOD_API_URL=http://<ip-may-tinh>:8787
 | `GET` | `/api/Account/profile` | **Bearer JWT** | Lấy thông tin hồ sơ của tài khoản đang đăng nhập. |
 | `PUT` | `/api/Account/update-profile` | **Bearer JWT** | Cập nhật thông tin cá nhân (`displayName`, `bio`, `dietPreference`). |
 | `POST` | `/api/Account/change-password` | **Bearer JWT** | Đổi mật khẩu tài khoản (`oldPassword`, `newPassword`). |
-| `POST` | `/api/Account/upgrade-to-vip` | **Bearer JWT** | Nâng cấp tài khoản VIP. |
 
 *(Tất cả endpoint đều hỗ trợ alias chữ thường như `/api/account/...` hoặc `/api/auth/...`)*.
 
@@ -117,17 +116,12 @@ flutter run --dart-define=FOOD_API_URL=http://<ip-may-tinh>:8787
 | `GET` | `/api/Recipes/favorites` | **Bearer JWT** | Lấy danh sách các món ăn người dùng đã lưu. |
 | `POST` | `/api/Recipes/sync-favorites` | **Bearer JWT** | Đồng bộ danh sách id yêu thích từ chế độ offline lên server. |
 
-### 4. Tủ lạnh / Túi nguyên liệu (Pantry / Kitchen Bag - R4)
+### 4. Tìm món theo nguyên liệu (không dùng AI)
 | Phương thức | Đường dẫn API | Xác thực | Mô tả |
 | :--- | :--- | :---: | :--- |
-| `GET` | `/api/pantry` | **Bearer JWT** | Lấy danh sách nguyên liệu người dùng đang có trong tủ lạnh. |
-| `POST` | `/api/pantry` | **Bearer JWT** | Thêm nguyên liệu vào tủ lạnh (hỗ trợ cả dạng object lẫn text linh hoạt). |
-| `PUT` | `/api/pantry/{id}` | **Bearer JWT** | Sửa thông tin nguyên liệu (số lượng, đơn vị tính). |
-| `DELETE` | `/api/pantry/{id}` | **Bearer JWT** | Xóa một nguyên liệu khỏi tủ. |
-| `DELETE` | `/api/pantry` | **Bearer JWT** | Dọn sạch toàn bộ tủ lạnh (hoặc xóa theo `?name=...`). |
-| `GET` | `/api/pantry/suggest` | **Bearer JWT** | Tự động lấy nguyên liệu trong tủ của user và gợi ý món nấu được. |
+| `POST` | `/api/suggest` | Không | Gửi `{"ingredients": ["trứng", "bắp cải"]}` → tối đa 30 món trong database dùng được nhiều nguyên liệu nhất, kèm `used` / `missing`. |
 
-*(Hỗ trợ cả alias `/api/kitchen-bag` và `/api/kitchenbag`)*.
+*(Chức năng Tủ lạnh / Kitchen Bag `/api/pantry` đã được gỡ; bảng `pantry_items` vẫn còn trong schema.)*
 
 ### 5. Gợi ý bằng AI (Gemini + Spoonacular)
 | Phương thức | Đường dẫn API | Xác thực | Mô tả |
@@ -157,8 +151,7 @@ cargo test --test e2e_tests
 ```
 
 **Các nhóm kiểm thử bao gồm:**
-* `e2e_tests.rs`: Kịch bản vòng đời người dùng trọn vẹn (Đăng ký ➔ Đăng nhập ➔ Khám phá catalog ➔ Quản lý tủ lạnh ➔ Gợi ý món ➔ Thả tim ➔ Đồng bộ offline ➔ Đổi mật khẩu).
+* `e2e_tests.rs`: Kịch bản vòng đời người dùng trọn vẹn (Đăng ký ➔ Đăng nhập ➔ Khám phá catalog ➔ Thả tim ➔ Đồng bộ offline ➔ Đổi mật khẩu).
 * `auth_tests.rs` & `adversarial_auth_tests.rs`: Kiểm thử xác thực, mật khẩu yếu, chống SQL Injection, kiểm tra giả mạo chữ ký JWT (`adversarial_jwt_challenge.rs`).
 * `recipe_tests.rs`, `adversarial_recipe_search_tests.rs`, `adversarial_recipe_ingredient_tests.rs`: Kiểm thử tra cứu, phân tách từ ngữ nguyên liệu tiếng Việt/Anh, chống SQL Injection trên chuỗi tìm kiếm.
 * `favorite_tests.rs`, `adversarial_favorite_concurrency_tests.rs`: Kiểm thử 64 tác vụ đồng thời thả tim liên tục đảm bảo tính toàn vẹn dữ liệu.
-* `pantry_tests.rs`: Kiểm thử các thao tác CRUD và cách ly dữ liệu giữa các người dùng (multi-tenant isolation).

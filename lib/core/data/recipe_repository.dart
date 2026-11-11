@@ -14,7 +14,7 @@
 // AI DÙNG KHO NÀY
 //   Home / danh mục / chi tiết KHÔNG dùng kho này nữa — chúng gọi API phân trang
 //   (xem recipe_feed_source.dart). Kho chỉ phục vụ Gợi ý theo nguyên liệu,
-//   Surprise Me, Tủ lạnh, Yêu thích, Thực đơn, và làm dữ liệu dự phòng offline.
+//   Surprise Me, Yêu thích, Thực đơn, và làm dữ liệu dự phòng offline.
 //   main() bắt đầu tải NGẦM, không chờ → app mở ngay. Tải xong →
 //   notifyListeners() để các màn đang hiển thị dựng lại.
 //
@@ -27,9 +27,9 @@
 //   4. Sắp xếp: món Việt trước, rồi đến món Spoonacular.
 //
 // DỮ LIỆU "KHÔNG RÕ"
-//   Món Việt không có thời gian nấu, khẩu phần, dinh dưỡng → `time`/`servings`
-//   = 0 và `nutrients` rỗng. Ở đây giữ 0, giao diện hiện "—"
-//   (xem các getter `hasCookTime`, `caloriesLabel`... trong model Recipe).
+//   Món Việt không có thời gian nấu, dinh dưỡng → server gửi số ước lượng
+//   (`timeEstimated`, `estimatedCalories`); không ước lượng được thì 0 và giao
+//   diện ẩn mục đó (xem `cookTimeLabel`, `caloriesLabel` trong model Recipe).
 //
 // LƯU Ý
 //   `findById` không thấy id → trả món đầu tiên thay vì crash màn chi tiết.
@@ -40,6 +40,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+import '../models/ingredient_normalizer.dart';
 import '../models/recipe.dart';
 import 'api_client.dart';
 
@@ -149,24 +150,30 @@ class RecipeRepository extends ChangeNotifier {
         category: category,
         tags: [category],
         cookTimeMinutes: (r['time'] as int?) ?? 0,
+        cookTimeEstimated: r['timeEstimated'] as bool? ?? false,
         servings: (r['servings'] as int?) ?? 0,
         difficulty: steps.length <= 4
             ? 'Dễ'
             : steps.length <= 8
             ? 'Trung bình'
             : 'Khó',
-        calories: nutrition.calories,
+        // Không có dinh dưỡng → calo ước tính cả món từ server (0 = không rõ).
+        calories: nutrition.calories > 0
+            ? nutrition.calories
+            : (r['estimatedCalories'] as int?) ?? 0,
+        caloriesEstimated:
+            nutrition.calories <= 0 && ((r['estimatedCalories'] as int?) ?? 0) > 0,
         nutrition: nutrition,
         averageRating: 0,
         totalRatings: 0,
-        ingredients: [
+        ingredients: normalizeIngredients([
           for (final i in r['ingredients'])
             IngredientItem(
               name: i['name'] as String,
               amount: num0(i['amount']),
               unit: i['unit'] as String? ?? '',
             ),
-        ],
+        ]),
         instructions: [
           for (final (index, step) in steps.indexed)
             InstructionStep(stepNumber: index + 1, description: step),

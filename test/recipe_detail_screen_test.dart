@@ -26,7 +26,8 @@ const detailJson = {
     {'name': 'Muối, tiêu', 'amount': 0.0, 'unit': '', 'notes': null},
   ],
   'instructions': [
-    {'stepNumber': 1, 'title': null, 'content': 'Sơ chế: Rửa sạch thịt.', 'imageUrl': null, 'estimatedMinutes': 1},
+    // Server chỉ trả phút cho bước CÓ ghi thời gian ("ướp 30 phút"); bước này không ghi.
+    {'stepNumber': 1, 'title': null, 'content': 'Sơ chế: Rửa sạch thịt.', 'imageUrl': null, 'estimatedMinutes': null},
   ],
   'nutrition': null,
   'tags': ['Bún, Phở & Mì'],

@@ -1,0 +1,21 @@
+# Icon ứng dụng "Bếp Việt" — sinh lại bằng: dart run flutter_launcher_icons
+#
+# Nguồn: assets/branding/
+#   - app_icon.png            : logo cắt sát (1024×1024) — iOS, web, Android cũ.
+#   - app_icon_foreground.png : logo thu vào vùng an toàn giữa nền kem — icon
+#                               thích ứng Android 8+ (máy cắt tròn/bo góc
+#                               không làm mất chữ).
+# Màu nền kem #F2E9D8 lấy từ nền của logo gốc.
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon.png"
+  android: "ic_launcher"
+  min_sdk_android: 21
+  adaptive_icon_background: "#F2E9D8"
+  adaptive_icon_foreground: "assets/branding/app_icon_foreground.png"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/branding/app_icon.png"
+    background_color: "#F2E9D8"
+    theme_color: "#16A34A"

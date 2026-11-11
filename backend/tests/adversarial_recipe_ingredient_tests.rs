@@ -256,7 +256,7 @@ async fn test_03_reason_string_vietnamese_and_count_format() {
         );
     }
 
-    // Now verify suggest reason string format: "Món ăn giàu dinh dưỡng tận dụng tối đa ... bạn đang có."
+    // Now verify suggest reason string format: "Tận dụng ... bạn đang có."
     let suggest_req = json!({
         "ingredients": ["thịt bò", "khoai tây"]
     });
@@ -272,7 +272,7 @@ async fn test_03_reason_string_vietnamese_and_count_format() {
             .unwrap_or_else(|| panic!("Suggestion {} missing reason", idx));
 
         assert!(
-            reason.starts_with("Món ăn giàu dinh dưỡng tận dụng tối đa "),
+            reason.starts_with("Tận dụng "),
             "Suggestion reason does not start with expected Vietnamese prefix at {}: '{}'",
             idx,
             reason

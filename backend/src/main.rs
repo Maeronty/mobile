@@ -23,6 +23,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     db::seed_database(&pool).await?;
     db::seed_vietnamese_recipes(&pool).await?;
+    food_tip_be_rust::services::cook_time::backfill_estimates(&pool).await?;
+    food_tip_be_rust::services::calories::backfill_estimates(&pool).await?;
 
     let state = AppState::new(pool, config.clone());
     let app = create_app(state);
