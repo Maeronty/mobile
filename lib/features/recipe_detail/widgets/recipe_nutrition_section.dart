@@ -3,8 +3,9 @@
 // =============================================================================
 //
 // FLOW
-//   Đổi khẩu phần → RecipeDetailController đổi hệ số → màn hình build lại
-//   → `formatGrams` trả về số gram mới cho từng chỉ số.
+//   Chỉ món có dữ liệu dinh dưỡng THẬT mới hiện đạm/tinh bột/béo; món chỉ có
+//   calo ước tính (món Việt) → câu "Chưa có dữ liệu dinh dưỡng", calo ước tính
+//   cả món đã hiện ở ô "Năng lượng" phía trên.
 //
 // LƯU Ý
 //   Món không có dữ liệu chất xơ → hiển thị "—" (không bịa số).

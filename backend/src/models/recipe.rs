@@ -20,6 +20,10 @@ pub struct Recipe {
     pub status: String,
     pub created_at: String,
     pub updated_at: String,
+    /// true = `cook_time_minutes` là ước lượng từ nội dung các bước (app hiện "~").
+    pub cook_time_estimated: bool,
+    /// Calo ước tính cả món (từ nguyên liệu); 0 = chưa tính được.
+    pub estimated_calories: i64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
@@ -117,9 +121,13 @@ pub struct RecipeDetailDto {
     pub image_url: String,
     pub additional_images: Vec<String>,
     pub cook_time_minutes: i64,
+    /// true = thời gian nấu là ước lượng (app hiện "~").
+    pub cook_time_estimated: bool,
     pub difficulty: String,
     pub servings: i64,
     pub calories: i64,
+    /// true = `calories` là ước tính từ nguyên liệu cho CẢ MÓN (app hiện "~").
+    pub calories_estimated: bool,
     pub average_rating: f64,
     pub total_ratings: i64,
     pub user_rating: Option<f64>,
@@ -185,6 +193,12 @@ pub struct SpoonacularCatalogItem {
     pub source: Option<String>,
     pub category: String,
     pub time: Option<i64>,
+    /// true = `time` là ước lượng từ nội dung các bước (app hiện "~").
+    #[serde(default, rename = "timeEstimated")]
+    pub time_estimated: bool,
+    /// Calo ước tính cả món khi `nutrients` rỗng (0 = không rõ).
+    #[serde(default, rename = "estimatedCalories")]
+    pub estimated_calories: i64,
     pub servings: Option<i64>,
     pub nutrients: HashMap<String, f64>,
     pub steps: Vec<String>,

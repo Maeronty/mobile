@@ -3,16 +3,14 @@
 // =============================================================================
 //
 // FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng khu vực nằm trong `widgets/`.
-// Logic chuyển bước, đồng hồ đếm ngược và giọng nói nằm trong
-// `cooking_mode_controller.dart`.
+// Logic chuyển bước và giọng đọc nằm trong `cooking_mode_controller.dart`.
 //
 // FLOW UI
-//   1. initState → tạo CookingModeController, truyền callback
-//      `_showTimerFinishedDialog` để hiện dialog khi hết giờ, rồi lắng nghe.
-//   2. Nút loa (AppBar) → `_toggleVoiceReading` → khi bật hiện SnackBar
-//      nội dung bước (mô phỏng trợ lý giọng nói).
-//   3. Nút Play/Pause → controller.toggleTimer.
-//   4. "Bước trước" → prevStep;  "Bước tiếp" → `_nextStep`: nếu đã ở bước cuối
+//   1. initState → tạo CookingModeController rồi lắng nghe.
+//   2. Nút loa (AppBar) → `_toggleVoiceReading` → controller bật/tắt giọng đọc
+//      (bật thì đọc bước hiện tại, sang bước nào tự đọc bước đó). Máy không
+//      có giọng tiếng Việt → SnackBar hướng dẫn cài.
+//   3. "Bước trước" → prevStep;  "Bước tiếp" → `_nextStep`: nếu đã ở bước cuối
 //      thì hiện dialog chúc mừng → đóng dialog + thoát Cooking Mode.
 // =============================================================================
 
@@ -24,8 +22,6 @@ import 'widgets/cooking_completion_dialog.dart';
 import 'widgets/cooking_navigation_controls.dart';
 import 'widgets/cooking_progress_header.dart';
 import 'widgets/cooking_step_card.dart';
-import 'widgets/cooking_timer_finished_dialog.dart';
-import 'widgets/cooking_timer_panel.dart';
 
 class CookingModeScreen extends StatefulWidget {
   final Recipe recipe;
@@ -45,10 +41,7 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
   @override
   void initState() {
     super.initState();
-    _controller = CookingModeController(
-      recipe: widget.recipe,
-      onTimerFinished: _showTimerFinishedDialog,
-    );
+    _controller = CookingModeController(recipe: widget.recipe);
     _controller.addListener(_onControllerChanged);
   }
 
@@ -61,24 +54,12 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
 
   void _onControllerChanged() => setState(() {});
 
-  void _showTimerFinishedDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => CookingTimerFinishedDialog(
-        stepNumber: _controller.currentStepIndex + 1,
-      ),
-    );
-  }
-
-  /// Bật/tắt giọng nói; khi bật thì hiện nội dung bước hiện tại.
-  void _toggleVoiceReading() {
-    final isSpeaking = _controller.toggleVoice();
-    if (isSpeaking) {
+  /// Bật/tắt giọng đọc; máy không đọc được tiếng Việt → báo cách cài.
+  Future<void> _toggleVoiceReading() async {
+    final error = await _controller.toggleVoice();
+    if (error != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Đang đọc hướng dẫn: ${_controller.currentStep.description}'),
-          duration: const Duration(seconds: 3),
-        ),
+        SnackBar(content: Text(error), duration: const Duration(seconds: 6)),
       );
     }
   }
@@ -120,10 +101,10 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _controller.isVoiceSpeaking ? Icons.volume_up_rounded : Icons.volume_down_rounded,
-              color: _controller.isVoiceSpeaking ? AppColors.primary : Colors.white,
+              _controller.isVoiceOn ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+              color: _controller.isVoiceOn ? AppColors.primary : Colors.white,
             ),
-            tooltip: 'Trợ lý đọc giọng nói',
+            tooltip: _controller.isVoiceOn ? 'Tắt giọng đọc' : 'Đọc hướng dẫn',
             onPressed: _toggleVoiceReading,
           ),
         ],
@@ -145,12 +126,6 @@ class _CookingModeScreenState extends State<CookingModeScreen> {
                 child: CookingStepCard(
                   stepNumber: stepNumber,
                   step: _controller.currentStep,
-                  timer: CookingTimerPanel(
-                    formattedTime: _controller.formattedTime,
-                    isRunning: _controller.isTimerRunning,
-                    onToggle: _controller.toggleTimer,
-                    onReset: _controller.resetTimer,
-                  ),
                 ),
               ),
             ),

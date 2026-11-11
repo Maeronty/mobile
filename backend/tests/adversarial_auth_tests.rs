@@ -833,23 +833,10 @@ async fn test_adv_cross_client_alias_routes_matrix() {
         current_pwd = new_pwd;
     }
 
-    // Matrix of Upgrade to VIP Routes:
-    // /api/Account/upgrade-to-vip, /api/account/upgrade-to-vip
-    let upgrade_routes = vec![
-        "/api/Account/upgrade-to-vip",
-        "/api/account/upgrade-to-vip",
-    ];
-
-    for route in upgrade_routes {
-        let (status, body) = send_request(&app, "POST", route, Some(sample_token), None).await;
-        assert_eq!(
-            status,
-            StatusCode::OK,
-            "Upgrade to VIP route '{}' failed with status: {}",
-            route,
-            status
-        );
-        assert_eq!(body["role"], "VIP");
+    // Chức năng VIP đã được gỡ → các route nâng cấp không còn tồn tại.
+    for route in ["/api/Account/upgrade-to-vip", "/api/account/upgrade-to-vip"] {
+        let (status, _) = send_request(&app, "POST", route, Some(sample_token), None).await;
+        assert_eq!(status, StatusCode::NOT_FOUND, "VIP route '{}' must be gone", route);
     }
 }
 
@@ -891,34 +878,6 @@ async fn test_adv_user_state_transitions_full_lifecycle() {
     assert_eq!(prof["role"], "User");
     assert_eq!(prof["isActive"], true);
 
-    // State 3: Transition to VIP Role
-    let (vip_status, vip_body) = send_request(
-        &app,
-        "POST",
-        "/api/Account/upgrade-to-vip",
-        Some(initial_token),
-        None,
-    )
-    .await;
-    assert_eq!(vip_status, StatusCode::OK);
-    assert_eq!(vip_body["role"], "VIP");
-
-    // Profile confirms VIP
-    let (_, prof_vip) =
-        send_request(&app, "GET", "/api/Account/profile", Some(initial_token), None).await;
-    assert_eq!(prof_vip["role"], "VIP");
-
-    // Idempotent VIP upgrade
-    let (vip_status_again, _) = send_request(
-        &app,
-        "POST",
-        "/api/Account/upgrade-to-vip",
-        Some(initial_token),
-        None,
-    )
-    .await;
-    assert_eq!(vip_status_again, StatusCode::OK);
-
     // State 4: Transition to Disabled (is_active = 0)
     sqlx::query("UPDATE users SET is_active = 0 WHERE id = ?")
         .bind(user_id)
@@ -954,7 +913,7 @@ async fn test_adv_user_state_transitions_full_lifecycle() {
     let (act_status, act_body) =
         send_request(&app, "POST", "/api/Account/login", None, Some(login_active)).await;
     assert_eq!(act_status, StatusCode::OK);
-    assert_eq!(act_body["role"], "VIP"); // Role should still be VIP after reactivation
+    assert_eq!(act_body["role"], "User"); // Role is preserved after reactivation
 }
 
 // =========================================================================

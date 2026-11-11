@@ -12,6 +12,7 @@
 // =============================================================================
 
 import 'package:flutter/material.dart';
+
 import '../../../core/data/api_client.dart';
 import '../../../core/models/recipe.dart';
 import '../../../core/theme/app_colors.dart';
@@ -81,7 +82,10 @@ class SurpriseHeroCard extends StatelessWidget {
                 top: 14,
                 left: 14,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
                     borderRadius: BorderRadius.circular(12),
@@ -156,28 +160,28 @@ class SurpriseHeroCard extends StatelessWidget {
                 const Divider(height: 1),
                 const SizedBox(height: 16),
 
-                // Thông số nhanh: Thời gian, Calo, Độ khó, Khẩu phần
+                // Thông số nhanh: Thời gian, Calo, Độ khó
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    SurpriseStatItem(
-                      icon: Icons.access_time_rounded,
-                      label: recipe.cookTimeLabel,
-                      sublabel: 'Thời gian',
-                      color: AppColors.primary,
-                    ),
-                    SurpriseStatItem(
-                      icon: Icons.local_fire_department_rounded,
-                      label: recipe.caloriesLabel,
-                      sublabel: 'Năng lượng',
-                      color: Colors.deepOrange,
-                    ),
-                    SurpriseStatItem(
-                      icon: Icons.people_outline_rounded,
-                      label: recipe.servingsLabel,
-                      sublabel: 'Khẩu phần',
-                      color: Colors.blue,
-                    ),
+                    // Không rõ thời gian nấu → ẩn hẳn (không hiện "—").
+                    if (recipe.cookTimeLabel case final time?)
+                      SurpriseStatItem(
+                        icon: Icons.access_time_rounded,
+                        label: time,
+                        sublabel: recipe.cookTimeEstimated
+                            ? 'Ước tính'
+                            : 'Thời gian',
+                        color: AppColors.primary,
+                      ),
+                    // Không rõ calo → ẩn. Calo ước tính là cho CẢ MÓN.
+                    if (recipe.caloriesLabel case final kcal?)
+                      SurpriseStatItem(
+                        icon: Icons.local_fire_department_rounded,
+                        label: kcal,
+                        sublabel: recipe.caloriesEstimated ? 'Cả món' : 'Năng lượng',
+                        color: Colors.deepOrange,
+                      ),
                     Column(
                       children: [
                         DifficultyStars(difficulty: recipe.difficulty),
@@ -218,8 +222,10 @@ class SurpriseHeroCard extends StatelessWidget {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: onCookNow,
-                        icon: const Icon(Icons.play_circle_fill_rounded,
-                            color: Colors.white),
+                        icon: const Icon(
+                          Icons.play_circle_fill_rounded,
+                          color: Colors.white,
+                        ),
                         label: const Text('Nấu ngay'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accent,

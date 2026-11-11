@@ -3,7 +3,7 @@
 // =============================================================================
 //
 // VAI TRÒ
-//   Hiển thị icon, giá trị và nhãn phụ: thời gian, năng lượng, khẩu phần.
+//   Hiển thị icon, giá trị và nhãn phụ: thời gian, năng lượng.
 // =============================================================================
 
 import 'package:flutter/material.dart';

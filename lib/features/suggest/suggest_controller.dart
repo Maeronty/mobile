@@ -4,15 +4,14 @@
 //
 // VAI TRÒ
 //   Chứa toàn bộ logic của màn "Gợi Ý AI":
-//     - 2 chế độ tìm: theo nguyên liệu (tủ lạnh) và theo tên món.
+//     - 2 chế độ tìm: theo nguyên liệu và theo tên món.
 //     - Thuật toán tính điểm khớp nguyên liệu (Match Score).
 //     - Sắp xếp kết quả (độ khớp / đánh giá / thời gian / calo).
 //
 // FLOW TỔNG QUÁT
 //   1. Màn hình mở → `SuggestController(initialIngredients: ...)`:
-//        - Có truyền nguyên liệu (từ Túi Thần Kỳ) → dùng danh sách đó.
-//        - Không truyền → lấy nguyên liệu trong tủ lạnh (PantryController).
-//        - Tủ lạnh trống → hiển thị toàn bộ công thức.
+//        - Có truyền nguyên liệu → dùng danh sách đó.
+//        - Không truyền → chưa chọn nguyên liệu nào → hiển thị toàn bộ công thức.
 //   2. Người dùng đổi chế độ / thêm-xoá nguyên liệu / đổi kiểu sắp xếp
 //      → controller cập nhật state → `notifyListeners()` → UI build lại.
 //   3. UI gọi `results(query)` để lấy danh sách món cần hiển thị:
@@ -29,7 +28,7 @@
 //     3. Chia vào 2 nhóm: matched (đã có) / missing (cần mua thêm).
 //     4. score = số matched / tổng số nguyên liệu  (0.0 → 1.0).
 //     5. Chỉ giữ công thức có ít nhất 1 nguyên liệu khớp.
-//   Cuối cùng sắp xếp giảm dần theo score → món tận dụng tủ lạnh tốt nhất
+//   Cuối cùng sắp xếp giảm dần theo score → món tận dụng nguyên liệu tốt nhất
 //   đứng đầu.
 // =============================================================================
 
@@ -37,14 +36,13 @@ import 'package:flutter/foundation.dart';
 
 import '../../core/data/recipe_repository.dart';
 import '../../core/models/recipe.dart';
-import '../kitchen_bag/pantry_controller.dart';
 
 /// Chế độ tìm kiếm của màn Gợi ý.
 enum SuggestSearchMode {
   /// Tìm theo tên món / danh mục / tag.
   byName,
 
-  /// Tìm theo nguyên liệu đang có (tủ lạnh) — mặc định.
+  /// Tìm theo nguyên liệu đang có — mặc định.
   byIngredients,
 }
 
@@ -72,9 +70,6 @@ class SuggestController extends ChangeNotifier {
     if (initialIngredients != null && initialIngredients.isNotEmpty) {
       _selectedIngredients.addAll(initialIngredients);
       _searchMode = SuggestSearchMode.byIngredients;
-    } else {
-      final pantry = PantryController.instance.ingredients;
-      _selectedIngredients.addAll(pantry);
     }
   }
 
@@ -216,8 +211,8 @@ class SuggestController extends ChangeNotifier {
             .compareTo(b.hasCookTime ? b.cookTimeMinutes : 1 << 30));
       case SuggestSortMode.calories:
         // Món chưa có dữ liệu calo (0) xếp cuối.
-        list.sort((a, b) => (a.hasNutrition ? a.calories : 1 << 30)
-            .compareTo(b.hasNutrition ? b.calories : 1 << 30));
+        list.sort((a, b) => (a.hasCalories ? a.calories : 1 << 30)
+            .compareTo(b.hasCalories ? b.calories : 1 << 30));
       case SuggestSortMode.match:
         // Ở chế độ tên món không có điểm khớp → giữ thứ tự gốc.
         if (isIngredientMode) {

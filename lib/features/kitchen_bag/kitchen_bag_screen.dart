@@ -1,29 +1,22 @@
 // =============================================================================
-// MÀN HÌNH: TÚI THẦN KỲ (Kitchen Bag) — gồm 2 tab
+// MÀN HÌNH: TÚI THẦN KỲ (Kitchen Bag) — các món đã lưu (yêu thích)
 // =============================================================================
 //
-// FILE NÀY CHỈ GHÉP CÁC KHU VỰC GIAO DIỆN; từng tab nằm trong `widgets/`.
-//   - Tab 1 "Tủ Lạnh Của Bạn" → logic ở `pantry_controller.dart`.
-//   - Tab 2 "Đã Lưu"          → logic ở `features/favorites/favorites_controller.dart`.
+// FILE NÀY CHỈ GHÉP GIAO DIỆN; danh sách nằm trong `widgets/favorites_tab.dart`,
+// logic ở `features/favorites/favorites_controller.dart`.
+// (Tab "Tủ Lạnh Của Bạn" đã được gỡ — tìm món theo nguyên liệu nằm ở tab Gợi Ý.)
 //
 // FLOW UI
-//   1. Nhập tên nguyên liệu → "Thêm"/Enter → `_addPantryItem()`
-//      → PantryController.addIngredient → xoá ô nhập → setState.
-//   2. Bấm × trên chip / "Dọn sạch tủ" → removeIngredient / clear → setState.
-//   3. Bấm "Gợi ý món từ N nguyên liệu này" → mở SuggestScreen với danh sách
-//      nguyên liệu hiện tại.
-//   4. Tab "Đã Lưu": lưới RecipeCard của các món yêu thích; bỏ thích trên card
-//      → callback `onFavoriteToggled` → setState để cập nhật lưới.
+//   1. Mở tab → lưới RecipeCard của các món yêu thích (chưa có → lời hướng dẫn).
+//   2. Danh mục món tải ngầm xong / danh sách yêu thích đổi (đăng nhập, đồng bộ,
+//      bỏ thích ở màn khác) → build lại.
+//   3. Bỏ thích trên card → `onFavoriteToggled` → build lại lưới.
 // =============================================================================
 
 import 'package:flutter/material.dart';
 import '../../core/data/recipe_repository.dart';
-import '../../core/theme/app_colors.dart';
 import '../favorites/favorites_controller.dart';
-import '../suggest/suggest_screen.dart';
-import 'pantry_controller.dart';
 import 'widgets/favorites_tab.dart';
-import 'widgets/pantry_tab.dart';
 
 class KitchenBagScreen extends StatefulWidget {
   const KitchenBagScreen({super.key});
@@ -32,96 +25,46 @@ class KitchenBagScreen extends StatefulWidget {
   State<KitchenBagScreen> createState() => _KitchenBagScreenState();
 }
 
-class _KitchenBagScreenState extends State<KitchenBagScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final TextEditingController _pantryInputController = TextEditingController();
-
+class _KitchenBagScreenState extends State<KitchenBagScreen> {
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    // Danh mục món tải ngầm sau khi mở app → tải xong thì dựng lại tab Yêu thích.
-    RecipeRepository.instance.addListener(_onRecipesLoaded);
+    // Danh mục món tải ngầm sau khi mở app → tải xong thì dựng lại lưới Yêu thích.
+    RecipeRepository.instance.addListener(_onStateChanged);
+    FavoritesController.instance.addListener(_onStateChanged);
   }
 
-  void _onRecipesLoaded() {
+  void _onStateChanged() {
     if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    RecipeRepository.instance.removeListener(_onRecipesLoaded);
-    _tabController.dispose();
-    _pantryInputController.dispose();
+    RecipeRepository.instance.removeListener(_onStateChanged);
+    FavoritesController.instance.removeListener(_onStateChanged);
     super.dispose();
-  }
-
-  void _addPantryItem() {
-    final text = _pantryInputController.text.trim();
-    if (text.isNotEmpty) {
-      PantryController.instance.addIngredient(text);
-      _pantryInputController.clear();
-      setState(() {});
-    }
-  }
-
-  void _openSuggest(List<String> pantryItems) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => SuggestScreen(initialIngredients: pantryItems),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final pantry = PantryController.instance;
     final favRecipes = FavoritesController.instance.favoriteRecipes;
-    final pantryItems = pantry.ingredients;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Túi Thần Kỳ'),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: Theme.of(context).brightness == Brightness.dark
-              ? AppColors.textSecondaryDark
-              : AppColors.textSecondaryLight,
-          indicatorColor: AppColors.primary,
-          indicatorWeight: 3,
-          tabs: [
-            Tab(
-              icon: const Icon(Icons.kitchen_rounded),
-              text: 'Tủ Lạnh Của Bạn (${pantryItems.length})',
-            ),
-            Tab(
-              icon: const Icon(Icons.favorite_rounded),
-              text: 'Đã Lưu (${favRecipes.length})',
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Túi Thần Kỳ'),
+            Text(
+              'Đã Lưu (${favRecipes.length})',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
             ),
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // TAB 1: Kitchen Pantry
-          PantryTab(
-            items: pantryItems,
-            inputController: _pantryInputController,
-            onAdd: _addPantryItem,
-            onClear: () => setState(() => pantry.clear()),
-            onRemove: (item) => setState(() => pantry.removeIngredient(item)),
-            onSuggest: () => _openSuggest(pantryItems),
-          ),
-
-          // TAB 2: Favorites List
-          FavoritesTab(
-            recipes: favRecipes,
-            onFavoriteToggled: () => setState(() {}),
-          ),
-        ],
+      body: FavoritesTab(
+        recipes: favRecipes,
+        onFavoriteToggled: () => setState(() {}),
       ),
     );
   }

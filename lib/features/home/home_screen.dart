@@ -10,15 +10,17 @@
 //      lên một chút là hiện lại ngay (floating + snap).
 //   2. Lời chào "Hôm nay nấu gì?" (+ báo nhẹ nếu đang dùng dữ liệu ngoại tuyến).
 //   3. Banner món nổi bật (vuốt ngang, tự chạy).
-//   4. Hai phím tắt: Tủ lạnh / Surprise Me.
+//   4. Phím tắt Surprise Me.
 //   5. Thanh danh mục DÍNH trên đầu khi cuộn.
-//   6. Lưới món 2 cột, tự tải trang kế khi gần cuối.
+//   6. Lưới XEM TRƯỚC 10 món của danh mục đang chọn.
+//   7. Nút "Xem tất cả N món" → màn danh sách đầy đủ có phân trang
+//      (features/recipe_list).
 //
 // FLOW UI
-//   - Mở màn → controller.init(): banner, danh mục, trang 1 (khung chờ shimmer).
-//   - Cuộn tới khi còn < 900 px là chạm cuối → controller.loadMore().
+//   - Mở màn → controller.init(): banner, danh mục, xem trước (khung chờ shimmer).
 //   - Chọn danh mục → nếu đã cuộn quá thanh danh mục thì cuộn mượt về ngay
-//     dưới thanh, rồi lưới mới hiện lần lượt.
+//     dưới thanh, rồi lưới xem trước của danh mục mới hiện lần lượt.
+//   - Bấm "Xem tất cả" → mở RecipeListScreen cho danh mục đang chọn.
 //   - Kéo xuống ở đầu trang → làm mới (thử lại server nếu đang ngoại tuyến).
 // =============================================================================
 
@@ -28,6 +30,7 @@ import '../../core/motion/fade_slide_in.dart';
 import '../../core/motion/motion.dart';
 import '../../core/motion/shimmer.dart';
 import '../../core/theme/app_colors.dart';
+import '../recipe_list/recipe_list_screen.dart';
 import '../surprise_me/surprise_me_screen.dart';
 import 'home_controller.dart';
 import 'widgets/home_brand_title.dart';
@@ -35,6 +38,7 @@ import 'widgets/home_category_bar.dart';
 import 'widgets/home_featured_carousel.dart';
 import 'widgets/home_quick_actions.dart';
 import 'widgets/home_recipe_grid.dart';
+import 'widgets/home_see_all_button.dart';
 import 'widgets/home_theme_toggle_button.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -55,14 +59,11 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scroll = ScrollController();
   final GlobalKey _topKey = GlobalKey();
 
-  static const double _loadMoreThreshold = 900;
-
   @override
   void initState() {
     super.initState();
     _controller.addListener(_onChanged);
-    _scroll.addListener(_maybeLoadMore);
-    _controller.init().then((_) => _fillViewport());
+    _controller.init();
   }
 
   @override
@@ -75,22 +76,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onChanged() {
     if (mounted) setState(() {});
-  }
-
-  void _maybeLoadMore() {
-    if (_scroll.hasClients && _scroll.position.extentAfter < _loadMoreThreshold) {
-      _controller.loadMore();
-    }
-  }
-
-  /// Màn hình cao (desktop/tablet) có thể chưa đủ món để cuộn → tải thêm.
-  void _fillViewport() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted || !_scroll.hasClients) return;
-      if (_scroll.position.maxScrollExtent < _loadMoreThreshold && _controller.hasMore) {
-        _controller.loadMore().then((_) => _fillViewport());
-      }
-    });
   }
 
   Future<void> _selectCategory(String? category) async {
@@ -107,11 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
     await _controller.selectCategory(category);
-    _fillViewport();
   }
 
   void _openSurpriseMe() {
     Navigator.push(context, MaterialPageRoute(builder: (_) => const SurpriseMeScreen()));
+  }
+
+  void _openAll() {
+    final listController = _controller.openAllController();
+    Navigator.push(context, MaterialPageRoute(builder: (_) => RecipeListScreen(controller: listController)));
   }
 
   @override
@@ -120,10 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: () async {
-          await c.refresh();
-          _fillViewport();
-        },
+        onRefresh: c.refresh,
         child: CustomScrollView(
           controller: _scroll,
           physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
@@ -160,10 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 20),
                   FadeSlideIn(
                     delay: Motion.stagger * 2,
-                    child: HomeQuickActions(
-                      onOpenPantry: () => widget.onNavigateTab?.call(2),
-                      onOpenSurprise: _openSurpriseMe,
-                    ),
+                    child: HomeQuickActions(onOpenSurprise: _openSurpriseMe),
                   ),
                   const SizedBox(height: 8),
                 ],
@@ -194,23 +177,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (c.total > 0) Text('${c.total} món', style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                      if (c.total > 0) Text('${formatCount(c.total)} món', style: const TextStyle(color: Colors.grey, fontSize: 13)),
                     ],
                   ),
                 ),
               ),
             ),
-            HomeRecipeGrid(items: c.items, shouldAnimate: c.shouldAnimate, pageSize: HomeController.pageSize),
-            HomeGridFooter(
-              loading: c.isLoading,
-              hasMore: c.hasMore,
-              error: c.error,
-              total: c.total,
-              // Danh sách đang trống (vừa đổi danh mục) → khung chờ cao bằng
-              // một màn hình để vị trí cuộn không bị kéo ngược lên.
-              fillViewport: c.items.isEmpty,
-              onRetry: () => c.retry().then((_) => _fillViewport()),
-            ),
+            HomeRecipeGrid(items: c.items, shouldAnimate: c.shouldAnimate, pageSize: HomeController.previewSize),
+            if (!c.isLoading && c.error == null && c.hasMoreThanPreview)
+              HomeSeeAllButton(total: c.total, onPressed: _openAll)
+            else
+              HomeGridFooter(
+                loading: c.isLoading,
+                hasMore: false,
+                error: c.error,
+                total: c.total,
+                // Lưới đang trống (vừa đổi danh mục) → khung chờ cao bằng
+                // một màn hình để vị trí cuộn không bị kéo ngược lên.
+                fillViewport: c.items.isEmpty,
+                onRetry: c.retry,
+              ),
           ],
         ),
       ),

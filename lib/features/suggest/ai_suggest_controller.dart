@@ -1,26 +1,30 @@
 // =============================================================================
-// FEATURE: GỢI Ý MÓN BẰNG AI (Gemini + Spoonacular, qua backend Rust)
+// FEATURE: NHẬN DIỆN NGUYÊN LIỆU TỪ ẢNH → TÌM MÓN TRONG KHO CÔNG THỨC
 // =============================================================================
 //
 // VAI TRÒ
 //   Giữ danh sách nguyên liệu đang nhập, kết quả gợi ý và trạng thái chờ.
 //   AiSuggestScreen chỉ hiển thị và gọi các hàm ở đây.
 //
-// FLOW NHẬN DIỆN ẢNH (`analyzeImage`)
+// FLOW NHẬN DIỆN ẢNH (`analyzeImage`) — bước DUY NHẤT dùng AI (Gemini)
 //   1. Ảnh > 3 MB → báo lỗi. Đoán loại ảnh từ byte đầu file (JPEG/PNG/WebP),
 //      không tin đuôi file.
-//   2. `POST /api/Ai/recognize` {mime, data(base64)} → danh sách tên nguyên liệu.
-//   3. Gộp với nguyên liệu đang nhập (bỏ trùng, không phân biệt hoa thường),
-//      xoá kết quả cũ, báo người dùng kiểm tra lại trước khi tìm món.
+//   2. `POST /api/Ai/recognize` {mime, data(base64)} → tên nguyên liệu (tiếng Việt).
+//   3. Gộp với nguyên liệu đang nhập (bỏ trùng, không phân biệt hoa thường).
+//   4. TỰ ĐỘNG tìm món luôn bằng danh sách mới (bước dưới). Người dùng vẫn có
+//      thể sửa ô nhập rồi bấm tìm lại.
 //
-// FLOW GỢI Ý MÓN (`suggest`)
+// FLOW TÌM MÓN (`suggest`) — KHÔNG gọi AI / API key nào
 //   1. Tách ô nhập theo dấu phẩy / chấm phẩy / xuống dòng, bỏ trùng.
-//   2. `POST /api/Ai/suggest` {ingredients} → [{id, title, reason, used, missing}].
+//   2. `POST /api/suggest` {ingredients} → server so khớp với nguyên liệu của
+//      ≈ 3.600 công thức trong database → [{id, title, reason, used, missing}],
+//      món dùng được nhiều nguyên liệu nhất (rồi cần mua ít nhất) lên đầu.
 //   3. Rỗng → báo đổi nguyên liệu.
 //
 // LƯU Ý
-//   - Cả hai API cần đăng nhập (tốn lượt gọi Gemini/Spoonacular): khách thì
-//     `requiresLogin = true`, UI hiện nút đăng nhập thay vì gọi API.
+//   - Chỉ nhận diện ảnh cần đăng nhập (tốn lượt gọi Gemini): khách thì
+//     `requiresLogin = true`, UI ẩn nút ảnh và hiện nút đăng nhập. Tìm món theo
+//     nguyên liệu gõ tay thì ai cũng dùng được.
 //   - Lỗi nào cũng chuyển thành `message` để hiển thị, không ném ra UI.
 // =============================================================================
 
@@ -31,7 +35,8 @@ import 'package:flutter/foundation.dart';
 import '../../core/data/api_client.dart';
 import '../auth/auth_controller.dart';
 
-/// Một món gợi ý trả về từ `/api/Ai/suggest` (đã dịch tiếng Việt).
+/// Một món gợi ý trả về từ `/api/suggest`; `id` là id công thức trong database
+/// (mở được màn Chi tiết).
 class AiSuggestion {
   final int id;
   final String title;
@@ -59,6 +64,7 @@ class AiSuggestion {
 class AiSuggestController extends ChangeNotifier {
   static const int maxImageBytes = 3 * 1024 * 1024;
   static const Duration aiTimeout = Duration(seconds: 150);
+  static const Duration searchTimeout = Duration(seconds: 20);
 
   AiSuggestController({List<String> initialIngredients = const [], ApiClient? api})
       : _api = api ?? ApiClient.instance,
@@ -76,12 +82,15 @@ class AiSuggestController extends ChangeNotifier {
   bool get busy => _busy;
   bool get requiresLogin => !AuthController.instance.isLoggedIn;
 
-  List<String> get ingredients => _input
-      .split(RegExp('[,;\n]'))
-      .map((e) => e.trim())
-      .where((e) => e.isNotEmpty)
-      .toSet()
-      .toList();
+  /// Ô nhập tách theo , ; xuống dòng — bỏ trùng KHÔNG phân biệt hoa thường
+  /// ("trứng", "Trứng" → giữ cái đầu).
+  List<String> get ingredients {
+    final seen = <String>{};
+    return [
+      for (final e in _input.split(RegExp('[,;\n]')).map((e) => e.trim()))
+        if (e.isNotEmpty && seen.add(e.toLowerCase())) e,
+    ];
+  }
 
   /// Người dùng sửa ô nhập → kết quả cũ không còn đúng nữa.
   void setInput(String value) {
@@ -100,7 +109,7 @@ class AiSuggestController extends ChangeNotifier {
     return null;
   }
 
-  Future<void> analyzeImage(Uint8List bytes) => _run(() async {
+  Future<void> analyzeImage(Uint8List bytes) => _run(needsLogin: true, () async {
         if (bytes.length > maxImageBytes) throw const ApiException('Hãy chọn ảnh nhỏ hơn 3 MB.');
         final mime = detectMime(bytes);
         if (mime == null) throw const ApiException('Hãy chọn ảnh JPG, PNG hoặc WebP.');
@@ -109,28 +118,34 @@ class AiSuggestController extends ChangeNotifier {
             timeout: aiTimeout);
         final found = [for (final x in data as List) x as String];
         if (found.isEmpty) {
-          _message = 'Gemini chưa nhận ra nguyên liệu. Hãy chụp gần hơn hoặc nhập tên.';
+          _message = 'Chưa nhận ra nguyên liệu trong ảnh. Hãy chụp gần hơn hoặc nhập tên.';
           return;
         }
         final combined = {for (final name in [...ingredients, ...found]) name.toLowerCase(): name};
         _input = combined.values.join(', ');
-        _results = [];
-        _message = 'Gemini nhận diện: ${found.join(', ')}. Bạn có thể sửa trước khi tìm món.';
+        notifyListeners(); // ô nhập hiện ngay nguyên liệu vừa nhận ra
+
+        await _search();
+        final count = _results.isEmpty ? ' — chưa tìm thấy món phù hợp' : ' — tìm thấy ${_results.length} món phù hợp';
+        _message = 'Nhận diện: ${found.join(', ')}$count. Sửa ô nhập rồi bấm tìm lại nếu cần.';
       });
 
-  Future<void> suggest() => _run(() async {
-        final terms = ingredients;
-        if (terms.isEmpty) throw const ApiException('Hãy thêm ít nhất một nguyên liệu.');
-        _results = [];
-        final data = await _api.post('/api/Ai/suggest', {'ingredients': terms}, timeout: aiTimeout);
-        _results = [for (final x in data as List) AiSuggestion.fromJson(x as Map<String, dynamic>)];
-        if (_results.isEmpty) _message = 'Chưa tìm thấy món phù hợp. Hãy đổi danh sách nguyên liệu.';
-      });
+  Future<void> suggest() => _run(_search);
 
-  Future<void> _run(Future<void> Function() action) async {
+  /// So khớp nguyên liệu với kho công thức trên server (không dùng AI).
+  Future<void> _search() async {
+    final terms = ingredients;
+    if (terms.isEmpty) throw const ApiException('Hãy thêm ít nhất một nguyên liệu.');
+    _results = [];
+    final data = await _api.post('/api/suggest', {'ingredients': terms}, timeout: searchTimeout);
+    _results = [for (final x in data as List) AiSuggestion.fromJson(x as Map<String, dynamic>)];
+    if (_results.isEmpty) _message = 'Chưa tìm thấy món phù hợp. Hãy đổi danh sách nguyên liệu.';
+  }
+
+  Future<void> _run(Future<void> Function() action, {bool needsLogin = false}) async {
     if (_busy) return;
-    if (requiresLogin) {
-      _message = 'Hãy đăng nhập để dùng gợi ý bằng AI.';
+    if (needsLogin && requiresLogin) {
+      _message = 'Hãy đăng nhập để nhận diện nguyên liệu từ ảnh.';
       notifyListeners();
       return;
     }

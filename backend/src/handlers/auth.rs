@@ -266,30 +266,6 @@ pub async fn change_password(
     })))
 }
 
-pub async fn upgrade_to_vip(
-    State(state): State<AppState>,
-    AuthUser(claims): AuthUser,
-) -> Result<Json<serde_json::Value>, AppError> {
-    let user_id = claims.user_id()?;
-
-    let now = Utc::now().to_rfc3339();
-    let result = sqlx::query("UPDATE users SET role = 'VIP', updated_at = ? WHERE id = ?")
-        .bind(&now)
-        .bind(user_id)
-        .execute(&state.pool)
-        .await
-        .map_err(AppError::Database)?;
-
-    if result.rows_affected() == 0 {
-        return Err(AppError::NotFound("Người dùng không tồn tại.".to_string()));
-    }
-
-    Ok(Json(json!({
-        "message": "Nâng cấp tài khoản VIP thành công!",
-        "role": "VIP"
-    })))
-}
-
 /// Maps a failed `INSERT INTO users` to a 400 when a concurrent request won the UNIQUE race.
 fn map_insert_user_error(e: sqlx::Error) -> AppError {
     let message = match e.as_database_error() {

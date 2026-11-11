@@ -385,7 +385,7 @@ async fn test_08_ai_suggest_endpoint() {
         assert!(first.get("id").is_some());
         assert!(first.get("title").is_some());
         assert!(first.get("reason").is_some());
-        assert!(first["reason"].as_str().unwrap().contains("Món ăn giàu dinh dưỡng"));
+        assert!(first["reason"].as_str().unwrap().starts_with("Tận dụng "));
 
         let used = first["used"].as_array().unwrap();
         assert!(!used.is_empty());

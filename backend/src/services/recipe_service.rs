@@ -2,6 +2,7 @@ use sqlx::SqlitePool;
 use std::collections::HashMap;
 
 use crate::error::AppError;
+use crate::services::cook_time;
 use crate::models::recipe::{
     IngredientDto, IngredientVocabularyItem, InstructionDto, NutritionDto, RawCatalogIngredient,
     Recipe, RecipeDetailDto, RecipeIngredient, RecipeInstruction, RecipeNutrition,
@@ -75,6 +76,8 @@ pub async fn get_catalog(pool: &SqlitePool) -> Result<Vec<SpoonacularCatalogItem
             source: r.source,
             category: r.category,
             time: Some(r.cook_time_minutes),
+            time_estimated: r.cook_time_estimated,
+            estimated_calories: r.estimated_calories,
             servings: Some(r.servings),
             nutrients,
             steps,
@@ -218,17 +221,16 @@ pub async fn get_recipe_by_id(
     .await
     .map_err(AppError::Database)?;
 
-    let step_count = instructions.len().max(1) as i64;
-    let est_mins = (r.cook_time_minutes / step_count).max(1);
-
+    // Thời gian từng bước = thời gian GHI TRONG bước đó (VD "ướp 30 phút");
+    // bước không ghi → None, không chia đều tổng thời gian nữa.
     let instruction_dtos: Vec<InstructionDto> = instructions
         .into_iter()
         .map(|inst| InstructionDto {
             step_number: inst.step_number,
             title: None,
+            estimated_minutes: cook_time::displayed_step_minutes(&inst.content),
             content: inst.content,
             image_url: None,
-            estimated_minutes: Some(est_mins),
         })
         .collect();
 
@@ -254,8 +256,10 @@ pub async fn get_recipe_by_id(
             cal,
         )
     } else {
-        (None, 0)
+        // Không có dữ liệu dinh dưỡng → calo ước tính từ nguyên liệu (0 = không rõ).
+        (None, r.estimated_calories)
     };
+    let calories_estimated = nutrition_dto.is_none() && calories > 0;
 
     Ok(RecipeDetailDto {
         recipe_id: r.id,
@@ -266,9 +270,11 @@ pub async fn get_recipe_by_id(
         image_url: r.image_url.unwrap_or_default(),
         additional_images: vec![],
         cook_time_minutes: r.cook_time_minutes,
+        cook_time_estimated: r.cook_time_estimated,
         difficulty: r.difficulty,
         servings: r.servings,
         calories,
+        calories_estimated,
         average_rating: r.average_rating,
         total_ratings: r.total_ratings,
         user_rating: None,
@@ -705,6 +711,11 @@ pub async fn suggest_recipes(
         let mut missing = Vec::new();
         let mut seen_missing = std::collections::HashSet::new();
         for ring in &r_ings {
+            // Dòng nhóm của dữ liệu cào ("Gia vị: muối, tiêu", "DỤNG CỤ: khuôn...")
+            // là gia vị / đồ ăn kèm / dụng cụ, không tính là nguyên liệu cần mua.
+            if is_group_line(ring) {
+                continue;
+            }
             let matched = user_ings
                 .iter()
                 .any(|u| ingredient_matches(u, ring));
@@ -713,18 +724,13 @@ pub async fn suggest_recipes(
             }
         }
 
+        // Chỉ nêu điều so khớp được thật sự, không tự nhận xét về dinh dưỡng.
         let reason = if used.len() == 1 {
-            format!(
-                "Món ăn giàu dinh dưỡng tận dụng tối đa {} bạn đang có.",
-                used[0]
-            )
+            format!("Tận dụng {} bạn đang có.", used[0])
         } else {
             let last = used.last().unwrap();
             let prefix = used[..used.len() - 1].join(", ");
-            format!(
-                "Món ăn giàu dinh dưỡng tận dụng tối đa {} và {} bạn đang có.",
-                prefix, last
-            )
+            format!("Tận dụng {} và {} bạn đang có.", prefix, last)
         };
 
         suggestions.push(SuggestItemResponse {
@@ -736,14 +742,31 @@ pub async fn suggest_recipes(
         });
     }
 
+    // Dùng được nhiều nguyên liệu nhất lên đầu, cùng số thì món cần mua ít hơn.
     suggestions.sort_by(|a, b| {
         b.used
             .len()
             .cmp(&a.used.len())
             .then_with(|| a.missing.len().cmp(&b.missing.len()))
     });
+    suggestions.truncate(MAX_SUGGESTIONS);
 
     Ok(suggestions)
+}
+
+/// Số món gợi ý tối đa trả về (đủ để chọn, không đổ cả nghìn món về app).
+const MAX_SUGGESTIONS: usize = 30;
+
+/// "Gia vị: muối, tiêu" / "DỤNG CỤ: khuôn" — nhãn ngắn, không có chữ số, rồi dấu ":".
+fn is_group_line(name: &str) -> bool {
+    match name.split_once(':') {
+        Some((label, _)) => {
+            let label = label.trim();
+            let len = label.chars().count();
+            (2..=40).contains(&len) && !label.chars().any(|c| c.is_ascii_digit())
+        }
+        None => false,
+    }
 }
 
 pub async fn get_ingredients_list(

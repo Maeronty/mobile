@@ -285,12 +285,6 @@ async fn test_adversarial_nonexistent_user_id_in_valid_token() {
     .await;
     assert_eq!(status_pwd, StatusCode::NOT_FOUND);
     assert!(body_pwd["message"].as_str().unwrap().contains("Người dùng không tồn tại"));
-
-    // 4. POST /api/Account/upgrade-to-vip -> 404 Not Found
-    let (status_vip, body_vip) =
-        send_request(&app, "POST", "/api/Account/upgrade-to-vip", Some(&auth_header), None).await;
-    assert_eq!(status_vip, StatusCode::NOT_FOUND);
-    assert!(body_vip["message"].as_str().unwrap().contains("Người dùng không tồn tại"));
 }
 
 #[tokio::test]
